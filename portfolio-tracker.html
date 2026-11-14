@@ -51,6 +51,17 @@ td{padding:7px 8px;text-align:right;border-bottom:1px solid var(--ln);white-spac
 th:first-child,td:first-child{text-align:left}
 tr.g td{background:var(--ch);font-weight:600}
 .up{color:var(--up)}.dn{color:var(--dn)}
+a.tk{color:inherit;text-decoration:underline dotted;text-underline-offset:3px}a.tk:hover{color:var(--ac);text-decoration:underline}
+button:disabled{opacity:.45;cursor:default}button:disabled:hover{border-color:var(--ln)}
+#tb th:first-child,#tb td:first-child{position:sticky;left:0;z-index:1;background:var(--pn);box-shadow:inset -1px 0 0 var(--ln)}
+#tb th:first-child{z-index:2}
+#tb tr.g td:first-child{position:static;background:var(--ch);box-shadow:none}
+.gl{position:sticky;left:8px;display:inline-block}
+.mh{margin-left:8px}.mh.mo{color:#eab308;font-weight:600}
+.hd>div{flex-wrap:wrap}.ms{position:relative;display:inline-block}
+.hd .mp{display:block;position:absolute;left:0;top:100%;margin-top:4px;z-index:7;background:var(--pn);border:1px solid var(--ln);border-radius:8px;padding:4px;min-width:200px;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.mp label{display:flex;align-items:center;gap:8px;padding:6px 8px;cursor:pointer;white-space:nowrap;color:var(--ink);font-size:.8125rem;border-radius:6px}.mp label:hover{background:var(--ch)}
+input[type=checkbox]{width:auto;padding:0;accent-color:var(--ac)}
 .chip{background:var(--ch);border-radius:4px;padding:1px 6px;font-size:0.75rem;color:var(--mu);margin-left:6px}
 .stale{color:#d98a1c;font-size:0.75rem;margin-left:6px}
 .sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:8px}
@@ -135,30 +146,35 @@ input,select{font-size:1rem}
       <label><span id="fwl">Price paid</span><input id="fw" type="number" step="any" min="0"></label>
       <label hidden>Currency<select id="fc"><option>USD</option><option>SGD</option><option>TWD</option><option>USDT</option><option>MYR</option></select></label>
       <label id="nv">Current price (optional)<input id="fp" type="number" step="any" min="0" placeholder="Auto"></label>
+      <label id="nlw" hidden style="grid-column:span 2">NAV table link (Principal funds, optional)<input id="nl" type="url" placeholder="https://www.principal.com.my/en/nav/…_format=csv"></label>
       <label hidden>ATH<input id="fa" type="number" step="any" min="0" placeholder="Auto"></label>
       <div><button class="pri" id="sv">Save</button> <button id="cn" hidden>Cancel</button> <button id="ua" type="button" disabled>Undo</button></div>
     </div>
     <div id="msg"></div>
     <p class="note">Buying a ticker you already hold blends the units and WAC. Selling adds to realized P/L (in MYR at today’s rate) and removes the row when nothing is left.</p>
+    <div class="hd" style="margin:18px 0 8px"><h2>Transactions</h2><div><button id="txb" type="button"></button></div></div>
+    <div id="txw"><div class="sc"><table id="txt"></table></div><div class="st" id="txpg" style="display:flex;gap:10px;align-items:center;justify-content:flex-end;margin-top:8px"></div></div>
   </section>
   <section class="box">
     <div class="hd"><h2>Holdings</h2>
-      <div>Market <select id="mf"><option value="">All markets</option><option value="US">United States</option><option value="TW">Taiwan</option><option value="SG">Singapore</option><option value="CRYPTO">Crypto</option><option value="MYF">Malaysia</option></select>
+      <div>Market <span class="ms" id="mfw"><button type="button"></button><div class="mp" hidden></div></span>
+      Columns <span class="ms" id="cvw"><button type="button"></button><div class="mp" hidden></div></span>
       Group by <select id="gb"><option value="m">Market</option><option value="c">Currency</option><option value="">None</option></select></div>
     </div>
     <div class="sc"><table id="tb"></table></div>
     <ol class="note">
-      <li>Prices refresh at the Stock refresh interval below: US, Taiwan and Singapore quotes from Yahoo Finance (Google Finance as backup), crypto from Binance (USDT pairs), mutual funds are manual.</li>
+      <li>Prices refresh at the Stock refresh interval below: US, Taiwan and Singapore quotes from Yahoo Finance, crypto from Binance (USDT pairs), mutual funds are manual.</li>
       <li>Cost is converted at the current FX rate, so currency gains and losses are not tracked separately.</li>
       <li>The 5-year high and its date are built from daily highs and rechecked every 6 hours.</li>
-      <li>For a mutual fund, the highest NAV you have entered is used as its ATH.</li>
+      <li>For a MY mutual fund, the highest NAV you have entered is used as its ATH.</li>
+      <li>YTD % compares the current price with the last close of the previous year. Manual-price funds show a dash.</li>
     </ol>
   </section>
 </main>
 <footer>
   <div class="st" id="st"></div>
   <section class="fx" id="fx"></section>
-  <section class="fx"><label>Stock refresh <select id="rf"><option value="5000">5 sec</option><option value="10000">10 sec</option><option value="15000">15 sec</option><option value="30000">30 sec</option><option value="60000">60 sec</option></select></label><button id="pxs">Test connection</button><span id="pxm">Free sources block fast refreshing, so 15 sec or slower is safer.</span></section>
+  <section class="fx"><label>Stock refresh <select id="rf"><option value="5000">5 sec</option><option value="10000">10 sec</option><option value="15000">15 sec</option><option value="30000">30 sec</option><option value="60000">60 sec</option></select></label><button id="pxs">Test connection</button><span id="pxm"></span></section>
 </footer>
 <div id="ath-tip"></div><div id="h-tip"></div>
 <script>
@@ -175,7 +191,9 @@ const MKS=Object.keys(MK).sort((a,b)=>MK[a].n.localeCompare(MK[b].n)),CUR=["USD"
 const seed=[{id:1,m:"US",t:"AAPL",q:10,w:150,c:"USD",ath:0},{id:2,m:"TW",t:"2330.TW",q:100,w:900,c:"TWD",ath:0},{id:3,m:"CRYPTO",t:"BTC",q:0.05,w:60000,c:"USDT",ath:0},{id:4,m:"MYF",t:"Sample fund",q:1000,w:1,c:"MYR",p:1.1,ath:1.2}];
 let tmSort={col:"vm",dir:"desc"},tcSort={col:"vm",dir:"desc"},tbSort={col:"v",dir:"desc"};
 let H=[],fx={USD:4.2,SGD:3.2,TWD:0.135,USDT:4.2,MYR:1},man={},eid=null,last=null,busy=false;
-let HIST=[],INTRA=[],TG={},RL=0;
+let HIST=[],INTRA=[],TG={},RL=0,TX=[],TXP=0;
+const okTx=a=>Array.isArray(a)?a.filter(x=>x&&isFinite(x.ts)&&(x.a=="b"||x.a=="s")):[];
+try{TX=okTx(JSON.parse(sto.get("pt_tx")||"[]"))}catch(e){TX=[]}
 
 try{
   H=JSON.parse(sto.get("pt_h")||"null")||seed;
@@ -193,7 +211,7 @@ try{
   save();
 }catch(e){H=seed}
 try{HIST=JSON.parse(sto.get("pt_hist")||"[]")||[];TG=JSON.parse(sto.get("pt_tg")||"{}")||{};RL=+sto.get("pt_rl")||0;INTRA=JSON.parse(sto.get("pt_intra")||"[]")||[]}catch(e){}
-H.forEach(h=>{if(!h.athd&&h.m!="MYF")h.ht=0});
+H.forEach(h=>{if((!h.athd||!(h.y0>0)||h.y0y!=new Date(Date.now()+288e5).getUTCFullYear())&&h.m!="MYF")h.ht=0});
 
 function save(){
   sto.set("pt_h",JSON.stringify(H));
@@ -208,6 +226,8 @@ theme(sto.get("pt_theme")||(matchMedia("(prefers-color-scheme:dark)").matches?"d
 $("#th").onclick=()=>theme(document.documentElement.dataset.theme=="dark"?"light":"dark");
 
 /* format */
+const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const fd=iso=>{const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(iso||"");return m?m[3]+" "+MON[+m[2]-1]+" "+m[1].slice(2):""};
 const nf=(v,d=2)=>isFinite(v)?v.toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d}):"–";
 const px=v=>v==null||!(v>0)?"–":nf(v,v<1?6:v<10?4:2);
 const sg=(v,d=2)=>(v>0.005?"+":v<-0.005?"−":"")+nf(Math.abs(v),d);
@@ -223,8 +243,18 @@ function convertAum(valMYR){
   return valMYR;
 }
 
+function nyNow(){const p={};new Intl.DateTimeFormat("en-US",{timeZone:"America/New_York",weekday:"short",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(new Date()).forEach(x=>p[x.type]=x.value);return{wd:p.weekday,min:(+p.hour)*60+(+p.minute)}}
+function nyOff(){const d=new Date(),f=z=>new Date(d.toLocaleString("en-US",{timeZone:z}));return Math.round((f("America/New_York")-f("UTC"))/36e5)}
+const hm=n=>{n=((n%1440)+1440)%1440;return String(Math.floor(n/60)).padStart(2,"0")+String(n%60).padStart(2,"0")};
+function mktHrs(m){
+  if(m=="CRYPTO")return "Mon-Sun 0000hrs-2400hrs";
+  if(m=="TW")return "Mon-Fri 0900hrs - 1330hrs";
+  if(m=="US"){const d=(8-nyOff())*60;return "Mon-Fri "+hm(570+d)+"hrs - "+hm(960+d)+"hrs"}
+  return "Mon-Fri 0900hrs - 1700hrs"}
+const mkl=k=>`<span class="mh${isTrading(k)?" mo":""}" title="Malaysia time (MYT)">(${mktHrs(k)})</span>`;
 function isTrading(m){
   if(m=="CRYPTO") return true;
+  if(m=="US"){const n=nyNow();return n.wd!="Sat"&&n.wd!="Sun"&&n.min>=570&&n.min<960}
   const now = new Date();
   const utc = now.getTime() + now.getTimezoneOffset() * 60000;
   const myt = new Date(utc + 3600000 * 8);
@@ -233,7 +263,6 @@ function isTrading(m){
   const timeVal = myt.getHours() * 60 + myt.getMinutes();
   if(m=="SG") return timeVal >= 540 && timeVal <= 1020;
   if(m=="TW") return timeVal >= 540 && timeVal <= 810;
-  if(m=="US") return timeVal >= 1290 || timeVal <= 240;
   if(m=="MYF") return timeVal >= 540 && timeVal <= 1020;
   return false;
 }
@@ -251,25 +280,6 @@ async function yj(u){
     catch(e){yF[i]=Math.min((yF[i]||15000)*2,600000);yBad[i]=Date.now()+yF[i]}}
   net["Yahoo Finance"]=0;throw 0}
 
-let gBad=0;
-async function googleFinancePrice(ticker, market){
-  if(Date.now()<gBad)throw 0;
-  const base=ticker.replace(/\.(tw|two|si|kl)$/i,"");
-  const syms=market==="TW"?[base+":TPE"]:market==="SG"?[base+":SGX"]:market==="MYF"?[base+":KLSE"]:[base+":NASDAQ",base+":NYSE",base+":NYSEARCA"];
-  for(const g of syms){
-    const gUrl="https://www.google.com/finance/quote/"+encodeURIComponent(g);
-    let html="";
-    for(const p of [...(PX?[PX+(PX.includes("?")?"&url=":"?url=")]:[]),"https://api.allorigins.win/raw?url=","https://corsproxy.io/?"]){
-      try{
-        const r=await fetch(p+encodeURIComponent(gUrl),{cache:"no-store",signal:AbortSignal.timeout(5000)});
-        if(r.ok){html=await r.text();if(html)break}
-      }catch(e){}
-    }
-    const m=html.match(/data-last-price="([0-9.]+)"/)||html.match(/class="YMlKec fxfa-c">\$?([0-9.,]+)/);
-    if(m){const v=parseFloat(m[1].replace(/,/g,""));if(v>0){net["Google Finance"]=1;return v}}
-  }
-  gBad=Date.now()+300000;net["Google Finance"]=0;throw 0}
-
 async function yahoo(s){
   const u="https://query1.finance.yahoo.com/v8/finance/chart/"+encodeURIComponent(s)+"?interval=1d&range=1d";
   const d=await yj(u);
@@ -277,6 +287,7 @@ async function yahoo(s){
 
 async function price(h){
   const s=h.t.trim().toUpperCase();
+  if(navurl(h))return (await navdata(h)).p;
   if(h.m=="CRYPTO"){
     if(s=="USDT"||s=="USDC")return 1.0;
     try{const r=+(await j("https://api.binance.com/api/v3/ticker/price?symbol="+(s.endsWith("USDT")?s:s+"USDT"), 5000)).price;net.Binance=1;return r}catch(e){net.Binance=0;throw e}
@@ -284,10 +295,6 @@ async function price(h){
   
   const ySymbol = h.m=="MYF" ? (s.endsWith(".KL")?s:s+".KL") : h.m=="SG" ? (s.endsWith(".SI")?s:s+".SI") : h.m=="TW" ? (/\.TWO?$/.test(s)?s:(s+".TW")) : s;
 
-  try{
-    const gfVal = await googleFinancePrice(s, h.m);
-    if(gfVal > 0) return gfVal;
-  }catch(e){}
 
   try{
     const val = await yahoo(ySymbol);
@@ -311,15 +318,35 @@ async function price(h){
     const retryY = await yahoo(ySymbol);
     if(retryY > 0) return retryY;
   }catch(e){}
-  try{
-    const retryG = await googleFinancePrice(s, h.m);
-    if(retryG > 0) return retryG;
-  }catch(e){}
 
   throw 0;
 }
 
-const auto=h=>h.m!="MYF"||/\.KL$/i.test(h.t);
+const ystk=h=>h.m!="MYF"||/\.KL$/i.test(h.t);
+/* Malaysia mutual funds: daily NAV table from the fund company's own page */
+const NAVSRC={};
+const navurl=h=>ystk(h)?"":(/^https:\/\/www\.principal\.com\.my\/en\/nav\//i.test(h.ns||"")?h.ns:(NAVSRC[String(h.t).trim().toUpperCase().replace(/\s+/g," ")]||""));
+const auto=h=>ystk(h)||!!navurl(h);
+const NAVC={},NAVF={};
+async function navtxt(u){
+  for(const b of [...(PX?[PX]:[]),"https://corsproxy.io/?","https://api.allorigins.win/raw?url="]){
+    try{const r=await fetch(pxu(b,u).replace(/^https:\/\/corsproxy\.io\/\?&?url=/,"https://corsproxy.io/?").replace(/^https:\/\/api\.allorigins\.win\/raw\?url=&?url=/,"https://api.allorigins.win/raw?url="),{cache:"no-store",signal:AbortSignal.timeout(15000)});
+      if(r.ok){const t=(await r.text()).replace(/^\uFEFF/,"");if(/\d{2}-\d{2}-\d{4},[0-9.]+/.test(t))return t}}catch(e){}}
+  throw 0}
+async function navdata(h){
+  const u=navurl(h),c=NAVC[u];
+  if(c&&Date.now()-c.t<18e5)return c.d;
+  if(NAVF[u]&&Date.now()<NAVF[u])throw 0;
+  try{
+    const t=await navtxt(u),R=[];
+    t.split(/\r?\n/).forEach(l=>{const m=l.match(/^(\d{2})-(\d{2})-(\d{4}),([0-9.]+)/);if(m&&+m[4]>0)R.push([m[3]+"-"+m[2]+"-"+m[1],+m[4]])});
+    if(R.length<2)throw 0;
+    R.sort((a,b)=>a[0]<b[0]?1:-1);
+    const cut=new Date(Date.now()-1826*864e5).toISOString().slice(0,10);
+    let hv=0,hd="";R.forEach(r=>{if(r[0]>=cut&&r[1]>hv){hv=r[1];hd=r[0]}});
+    const yr=+hday().slice(0,4),yo=R.find(r=>+r[0].slice(0,4)<yr),d={p:R[0][1],pd:R[0][0],pv:R[1][1],hv,hd,y0:yo?yo[1]:0,yr};
+    NAVC[u]={t:Date.now(),d};return d
+  }catch(e){NAVF[u]=Date.now()+6e5;throw 0}}
 let RF=+(sto.get("pt_rf")||15000);
 const sleep=ms=>new Promise(r=>setTimeout(r,ms)),bz={c:0,s:0};
 async function tick(){if(document.hidden)return;
@@ -339,25 +366,21 @@ async function getfx(){if(document.hidden)return;
 /* connection check */
 function getMYT(d){
   if(!d) return "Connecting…";
-  return new Intl.DateTimeFormat('en-GB', {
-    timeZone: 'Asia/Kuala_Lumpur',
-    year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
-    hour12: true
-  }).format(d).replace(',', '');
+  const p={};
+  new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kuala_Lumpur',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}).formatToParts(d).forEach(x=>p[x.type]=x.value);
+  return p.day+" "+MON[+p.month-1]+" "+p.year.slice(2)+" "+p.hour+":"+p.minute+":"+p.second+" "+String(p.dayPeriod||"").toLowerCase();
 }
-const net = { FX: null, Binance: null, "Google Finance": null, "Yahoo Finance": null };
+const net = { FX: null, Binance: null, "Yahoo Finance": null };
 async function diag(){
   const T = [
     ["FX", () => j("https://open.er-api.com/v6/latest/USD", 5000)],
     ["Binance", () => j("https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT", 5000)],
-    ["Google Finance", () => googleFinancePrice("AAPL", "US")],
     ["Yahoo Finance", () => yj("https://query1.finance.yahoo.com/v8/finance/chart/AAPL?interval=1d&range=1d")]
   ];
   await Promise.all(T.map(async ([n, f]) => {
     try { await f(); net[n] = 1; } catch (e) { net[n] = 0; }
   }));
-  $("#pxm").textContent = (net["Google Finance"]||net["Yahoo Finance"]) ? "At least one stock source is reachable." : "No stock source is reachable from this browser.";
+  $("#pxm").textContent=net["Yahoo Finance"]?"":"No stock source is reachable from this browser.";
   render();
 }
 
@@ -365,6 +388,7 @@ async function diag(){
 
 let hb = false;
 async function hi5d(h){
+  if(navurl(h)){try{const d=await navdata(h);return d.hv>0?{v:d.hv,d:d.hd,y0:d.y0,yr:d.yr}:null}catch(e){return null}}
   const s=h.t.trim().toUpperCase(),iso=t=>new Date(t).toISOString().slice(0,10),top=A=>{let b=null;A.forEach(x=>{if(!b||+x[2]>+b[2])b=x});return b};
   if(h.m==="CRYPTO"){
     if(s==="USDT"||s==="USDC")return null;
@@ -373,14 +397,16 @@ async function hi5d(h){
       const b=top(await j(u+"&interval=1M&limit=60",5000));if(!b)return null;
       let v=+b[2],d=iso(+b[0]);
       try{const m=top(await j(u+"&interval=1d&startTime="+b[0]+"&limit=31",5000));if(m){v=Math.max(v,+m[2]);d=iso(+m[0])}}catch(e){}
-      return {v,d}
+      let y0=0;const yr=+hday().slice(0,4);try{const k=await j(u+"&interval=1d&startTime="+Date.UTC(yr-1,11,31)+"&limit=1",5000);if(k&&k[0]&&new Date(+k[0][0]).getUTCFullYear()==yr-1)y0=+k[0][4]}catch(e){}
+      return {v,d,y0,yr}
     }catch(e){return null}}
   const ys=h.m==="SG"?[s.replace(/\.SI$/i,"")+".SI"]:h.m==="MYF"?[s.replace(/\.KL$/i,"")+".KL"]:h.m==="TW"?(/\.TWO?$/.test(s)?[s]:[s+".TW",s+".TWO"]):[s,s+".US"];
   for(const y of ys){
     try{
       const r=(await yj("https://query1.finance.yahoo.com/v8/finance/chart/"+encodeURIComponent(y)+"?interval=1d&range=5y")).chart.result[0],hs=r.indicators.quote[0].high||[],ts=r.timestamp||[];
       let v=0,d="";hs.forEach((x,i)=>{if(x>v&&ts[i]){v=x;d=iso(ts[i]*1000)}});
-      if(v>0)return {v,d}
+      const cs=r.indicators.quote[0].close||[],yr=+hday().slice(0,4);let y0=0;ts.forEach((t,i)=>{if(cs[i]>0&&new Date(t*1000).getUTCFullYear()<yr)y0=cs[i]});
+      if(v>0)return {v,d,y0,yr}
     }catch(e){}}
   return null}
 async function loadHi(){
@@ -389,6 +415,7 @@ async function loadHi(){
     const r = await hi5d(h);
     if(r && r.v > 0){
       if((h.p||0) > r.v){h.ath=h.p;h.athd=hday()}else{h.ath=r.v;h.athd=r.d}
+      if(r.y0>0){h.y0=r.y0;h.y0y=r.yr}
       h.ht = Date.now();
     } else {
       if(h.p > (h.ath||0)){h.ath=h.p;h.athd=hday()}
@@ -449,7 +476,7 @@ async function livePx(){if(document.hidden)return;
   try{const p=await price({m,t});if(!fpDirty&&$("#ft").value.trim()==t)$("#fp").value=p}catch(e){}}
 $("#fp").oninput=()=>{fpDirty=true};
 let LST=[],chosen=null;
-$("#ft").oninput=()=>{chosen=null;clearTimeout(tm);tm=setTimeout(suggest,250)};
+$("#ft").oninput=()=>{chosen=null;fls();clearTimeout(tm);tm=setTimeout(suggest,250)};
 $("#ft").onfocus=()=>{if($("#ft").value.trim()&&!chosen)suggest()};
 $("#ft").onblur=()=>{$("#sl").hidden=true};
 $("#sl").onmousedown=e=>{
@@ -462,7 +489,7 @@ $("#sl").onmousedown=e=>{
     n:d.dataset.f=="MYF_MAN"?"Malaysia mutual fund":(d.dataset.f=="MYF"?"Malaysia stock / ETF":(d.dataset.f=="SG"?"Singapore stock / ETF":(d.dataset.f=="TW"?"Taiwan stock / ETF":"United States stock / ETF")))
   }:{t:r[0],m:r[1],n:r[2].split(" · ")[0]};
   $("#ft").value=chosen.t;$("#fm").value=chosen.m;$("#fc").value=MK[chosen.m].c;
-  $("#sl").hidden=true;fpDirty=false;
+  $("#sl").hidden=true;fpDirty=false;fls();
   if(chosen.m=="MYF")$("#fp").focus();else{$("#fq").focus();livePx()}};
 
 /* maths */
@@ -653,8 +680,8 @@ document.addEventListener("click",e=>{
 });
 
 function rows(){
-  const gb=$("#gb").value,mf=$("#mf").value;
-  const L=H.map((h,i)=>({h,i,x:calc(h)})).filter(o=>!mf||o.h.m===mf)
+  const gb=$("#gb").value,sa=CV.has("ath"),sy=CV.has("ytd");
+  const L=H.map((h,i)=>({h,i,x:calc(h)})).filter(o=>!MFS.size||MFS.has(o.h.m))
     .sort((a,b)=>{
       let va, vb;
       const col=tbSort.col;
@@ -666,6 +693,7 @@ function rows(){
       else if(col=="plm"){va=a.x.vm-a.x.cm;vb=b.x.vm-b.x.cm;}
       else if(col=="ath"){va=a.h.ath||0;vb=b.h.ath||0;}
       else if(col=="vsAth"){va=a.h.ath>0&&a.x.hv?a.h.p/a.h.ath-1:-999;vb=b.h.ath>0&&b.x.hv?b.h.p/b.h.ath-1:-999;}
+      else if(col=="ytd"){const ya=ytdp(a.h),yb=ytdp(b.h);va=ya==null?-999:ya;vb=yb==null?-999:yb;}
       else if(col=="pl"){va=a.x.pl;vb=b.x.pl;}
       else if(col=="pc"){va=a.x.pc;vb=b.x.pc;}
       else if(col=="v"){va=a.x.vm;vb=b.x.vm;}
@@ -675,7 +703,7 @@ function rows(){
     });
   const gk=o=>gb?o.h[gb]:"",ord=gb=="m"?MKS:CUR;
   const keys=[...new Set(L.map(gk))].sort((a,b)=>ord.indexOf(a)-ord.indexOf(b));
-  const tbCols=[["Ticker","t"],["Units","q"],["WAC","w"],["Price","p"],["Day %","dc"],["ATH (5Y)","ath"],["vs ATH","vsAth"],["P/L","pl"],["P/L %","pc"],["P/L (MYR)","plm"],["Value (MYR)","v"],["",""]];
+  const tbCols=[["Ticker","t"],["Units","q"],["WAC","w"],["Price","p"],["Day %","dc"],...(sa?[["ATH (5Y)","ath"],["vs ATH","vsAth"]]:[]),...(sy?[["YTD %","ytd"]]:[]),["P/L","pl"],["P/L %","pc"],["P/L (MYR)","plm"],["Value (MYR)","v"],["",""]];
   let s="<tr>"+tbCols.map(([lbl,key])=>{
     if(!key)return"<th></th>";
     const isS=tbSort.col===key,arr=isS?(tbSort.dir=="asc"?" ▲":" ▼"):"";
@@ -683,48 +711,49 @@ function rows(){
   }).join("")+"</tr>";
   keys.forEach(k=>{const G=L.filter(o=>gk(o)==k);
     if(gb){const vm=G.reduce((a,o)=>a+o.x.vm,0),cm=G.reduce((a,o)=>a+o.x.cm,0);const gq=G.filter(o=>o.h.pv>0&&o.h.p>0),gq0=gq.reduce((a,o)=>a+o.h.q*o.h.pv*(fx[o.h.c]||1),0),gd=gq0?gq.reduce((a,o)=>a+o.h.q*(o.h.p-o.h.pv)*(fx[o.h.c]||1),0)/gq0*100:null;
-      s+=`<tr class="g"><td colspan="4">${gb=="m"?MK[k].n:k}</td><td class="${cl(gd)}">${gd==null?"–":sg(gd)+"%"}</td><td colspan="3"></td><td class="${cl(vm-cm)}">${sg(cm?(vm-cm)/cm*100:0)}%</td><td class="${cl(vm-cm)}">${sg(vm-cm)}</td><td>${nf(vm)}</td><td></td></tr>`}
+      const gy0=G.filter(o=>ytdp(o.h)!=null),gyb=gy0.reduce((a,o)=>a+o.h.q*o.h.y0*(fx[o.h.c]||1),0),gyc=gy0.reduce((a,o)=>a+o.h.q*o.h.p*(fx[o.h.c]||1),0),gy=gyb?(gyc/gyb-1)*100:null;
+      s+=`<tr class="g"><td colspan="4"><span class="gl">${gb=="m"?MK[k].n+mkl(k):k}</span></td><td class="${cl(gd)}">${gd==null?"–":sg(gd)+"%"}</td>${sa?'<td colspan="2"></td>':""}${sy?`<td class="${cl(gy)}">${gy==null?"–":sg(gy)+"%"}</td>`:""}<td></td><td class="${cl(vm-cm)}">${sg(cm?(vm-cm)/cm*100:0)}%</td><td class="${cl(vm-cm)}">${sg(vm-cm)}</td><td>${nf(vm)}</td><td></td></tr>`}
     G.forEach(({h,i,x})=>{
-      s+=`<tr><td><b>${esc(h.t)}</b>${h.n?" - "+esc(h.n.slice(0,28)):""}<span class="chip">${esc(h.c||(MK[h.m]?MK[h.m].c:""))}</span>${h.err?'<span class="stale">stale</span>':""}</td>
-      <td>${nf(+h.q,2)}</td><td>${px(h.w)}</td><td style="${isTrading(h.m) ? "color:#eab308;font-weight:600;" : ""}">${x.hv?px(h.p):"–"}</td><td class="${cl(dayp(h))}">${dayp(h)==null?"–":sg(dayp(h))+"%"}</td><td class="athc" data-i="${i}">${px(h.ath)}</td>
-      <td class="${cl(h.ath&&x.hv?h.p-h.ath:0)}">${h.ath>0&&x.hv?sg((h.p/h.ath-1)*100)+"%":"–"}</td>
+      s+=`<tr><td><b>${tka(h)}</b>${h.n?" - "+esc(h.n.slice(0,28)):""}<span class="chip">${esc(h.c||(MK[h.m]?MK[h.m].c:""))}</span>${h.err&&auto(h)?'<span class="stale">stale</span>':""}</td>
+      <td>${nf(+h.q,4)}</td><td>${px(h.w)}</td><td style="${isTrading(h.m) ? "color:#eab308;font-weight:600;" : ""}">${x.hv?px(h.p):"–"}</td><td class="${cl(dayp(h))}">${dayp(h)==null?"–":sg(dayp(h))+"%"}</td>${sa?`<td class="athc" data-i="${i}">${px(h.ath)}</td><td class="${cl(h.ath&&x.hv?h.p-h.ath:0)}">${h.ath>0&&x.hv?sg((h.p/h.ath-1)*100)+"%":"–"}</td>`:""}${sy?`<td class="${cl(ytdp(h))}">${ytdp(h)==null?"–":sg(ytdp(h))+"%"}</td>`:""}
       <td class="${cl(x.pl)}">${x.hv?sg(x.pl):"–"}</td><td class="${cl(x.pl)}">${x.hv?sg(x.pc)+"%":"–"}</td><td class="${cl(x.vm-x.cm)}">${x.hv?sg(x.vm-x.cm):"–"}</td><td>${nf(x.vm)}</td>
       <td><button data-e="${i}" title="Edit" style="padding:4px 7px;line-height:1;display:inline-flex;align-items:center;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button><button data-d="${i}" title="Delete" style="padding:4px 7px;line-height:1;display:inline-flex;align-items:center;justify-content:center;color:var(--dn);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button></td></tr>`})});
-  $("#tb").innerHTML=L.length?s:(H.length?"<tr><td>No holdings in this market.</td></tr>":"<tr><td>No holdings yet. Add one above.</td></tr>")}
-$("#mf").onchange=$("#gb").onchange=rows;
+  $("#tb").innerHTML=L.length?s:(H.length?"<tr><td>No holdings in the selected markets.</td></tr>":"<tr><td>No holdings yet. Add one above.</td></tr>")}
+$("#gb").onchange=rows;
 $("#tb").onclick=e=>{const b=e.target.closest("button");if(!b)return;
   if(b.dataset.d!=null){H.splice(+b.dataset.d,1);save();render()}
   if(b.dataset.e!=null){eid=+b.dataset.e;const h=H[eid];
-    $("#fm").value=h.m;$("#ft").value=h.t;$("#fq").value=h.q;$("#fw").value=h.w;$("#fc").value=h.c;$("#fp").value=h.p??"";fpDirty=false;chosen={t:h.t,m:h.m,n:h.n||""};$("#fa").value=h.am?h.ath:"";
+    $("#fm").value=h.m;$("#ft").value=h.t;$("#fq").value=h.q;$("#fw").value=h.w;$("#fc").value=h.c;$("#fp").value=h.p??"";fpDirty=false;chosen={t:h.t,m:h.m,n:h.n||""};$("#fa").value=h.am?h.ath:"";$("#nl").value=h.ns||"";fls();
     $("#fh").textContent="Edit holding";$("#fs").value="e";$("#fs").disabled=true;setMode();$("#cn").hidden=false;scrollTo({top:$("#fh").offsetTop-20,behavior:"smooth"})}};
 
 /* form */
-function reset(){eid=null;fpDirty=false;chosen=null;$("#sl").hidden=true;["ft","fq","fw","fp","fa"].forEach(i=>$("#"+i).value="");$("#fh").textContent="Add holding or record a trade";$("#fs").value="b";$("#fs").disabled=false;setMode();$("#cn").hidden=true;$("#msg").textContent=""}
-$("#fm").onchange=()=>{$("#fc").value=MK[$("#fm").value].c;fpDirty=false;suggest();livePx()};
+function reset(){eid=null;fpDirty=false;chosen=null;$("#sl").hidden=true;["ft","fq","fw","fp","fa","nl"].forEach(i=>$("#"+i).value="");fls();$("#fh").textContent="Add holding or record a trade";$("#fs").value="b";$("#fs").disabled=false;setMode();$("#cn").hidden=true;$("#msg").textContent=""}
+$("#fm").onchange=()=>{fls();$("#fc").value=MK[$("#fm").value].c;fpDirty=false;suggest();livePx()};
 $("#cn").onclick=reset;
 $("#sv").onclick=()=>{
   let t=$("#ft").value.trim().toUpperCase();const m=$("#fm").value;
   if(m==="TW"&&!/\.TWO?$/.test(t))t+=".TW";
-  const act=$("#fs").value,u=+$("#fq").value,w=$("#fw").value,p=$("#fp").value;
+  const act=$("#fs").value,u=+$("#fq").value,w=$("#fw").value,p=$("#fp").value,nl=$("#nlw").hidden?"":$("#nl").value.trim();
   if(!chosen||chosen.t.toUpperCase()!=t||!(u>0)){say("Pick a ticker from the search list, then enter units.");return}
+  if(nl&&!/^https:\/\/www\.principal\.com\.my\/en\/nav\/\S+_format=csv/i.test(nl)){say("The NAV table link must be the Principal Download CSV link (…/en/nav/…_format=csv).");return}
   const h=eid!=null?H[eid]:H.find(x=>x.m==m&&String(x.t).toUpperCase()==t);
   const pr=w!==""?+w:(act!="e"&&h&&h.p>0?h.p:NaN);
   if(!(pr>=0)||(act!="e"&&!(pr>0))){say("Enter the price.");return}
   const cp=h?JSON.parse(JSON.stringify(h)):null,idx=h?H.indexOf(h):-1;let ok;
   if(act=="e"){
     pushU({ref:h,prev:cp,idx,l:"edit of "+h.t});
-    Object.assign(h,{m,t,q:u,w:pr,c:MK[m].c,am:false,n:chosen.n,ath:m=="MYF"&&p!==""?Math.max(+p,h.ath||0):(h.ath||0),ht:0,dt:0,pv:0});if(p!=="")h.p=+p;if(m=="MYF"&&p!==""&&+p>(cp.ath||0))h.athd=hday();ok="Saved "+t+"."}
+    Object.assign(h,{m,t,q:u,w:pr,c:MK[m].c,am:false,n:chosen.n,ns:nl,ath:m=="MYF"&&p!==""?Math.max(+p,h.ath||0):(h.ath||0),ht:0,dt:0,pv:0});if(p!=="")h.p=+p;if(m=="MYF"&&p!==""&&+p>(cp.ath||0))h.athd=hday();ok="Saved "+t+"."}
   else if(act=="s"){
     if(!h){say("You don't hold "+t+".");return}
     if(u>h.q+1e-9){say("You only hold "+nf(h.q,4)+" units.");return}
     pushU({ref:h,prev:cp,idx,rl:RL,l:"sale of "+nf(u,4)+" "+t});
-    RL+=u*(pr-h.w)*(fx[h.c]||1);h.q=Math.max(0,h.q-u);if(h.q<1e-9)H.splice(idx,1);ok="Sold "+nf(u,4)+" "+t+"."}
+    RL+=u*(pr-h.w)*(fx[h.c]||1);h.q=Math.max(0,h.q-u);if(h.q<1e-9)H.splice(idx,1);ok="Sold "+nf(u,4)+" "+t+".";rec("s",m,t,u,pr,h.c,u*(pr-h.w)*(fx[h.c]||1))}
   else if(h){
     pushU({ref:h,prev:cp,idx,l:"purchase of "+nf(u,4)+" "+t});
-    const nq=h.q+u;h.w=(h.q*h.w+u*pr)/nq;h.q=nq;if(m=="MYF"&&p!==""){h.p=+p;if(+p>(h.ath||0)){h.ath=+p;h.athd=hday()}}ok="Bought "+nf(u,4)+" "+t+"."}
+    if(nl)h.ns=nl;const nq=h.q+u;h.w=(h.q*h.w+u*pr)/nq;h.q=nq;if(m=="MYF"&&p!==""){h.p=+p;if(+p>(h.ath||0)){h.ath=+p;h.athd=hday()}}ok="Bought "+nf(u,4)+" "+t+".";rec("b",m,t,u,pr,h.c)}
   else{
-    const nh={m,t,q:u,w:pr,c:MK[m].c,am:false,n:chosen.n,ath:m=="MYF"&&p!==""?+p:0,athd:m=="MYF"&&p!==""?hday():"",id:Date.now(),p:p===""?null:+p,ht:0};
-    H.push(nh);pushU({ref:nh,l:"adding "+t});ok="Added "+t+"."}
+    const nh={m,t,q:u,w:pr,c:MK[m].c,am:false,n:chosen.n,ns:nl,ath:m=="MYF"&&p!==""?+p:0,athd:m=="MYF"&&p!==""?hday():"",id:Date.now(),p:p===""?null:+p,ht:0};
+    H.push(nh);pushU({ref:nh,l:"adding "+t});ok="Added "+t+".";rec("b",m,t,u,pr,MK[m].c)}
   reset();say(ok,1);save();render();tick();loadHi();loadDay()};
 
 /* FX */
@@ -735,9 +764,19 @@ $("#au").onclick=()=>{man={};save();getfx()};
 
 /* day change, history, targets, trades */
 const dayp=h=>h.pv>0&&h.p>0?(h.p/h.pv-1)*100:null;
+const ytdp=h=>{const y=new Date(Date.now()+288e5).getUTCFullYear();return h.y0>0&&h.y0y==y&&h.p>0?(h.p/h.y0-1)*100:null};
 const ysym=h=>{const s=h.t.trim().toUpperCase();return h.m=="MYF"?(s.endsWith(".KL")?s:s+".KL"):h.m=="SG"?(s.endsWith(".SI")?s:s+".SI"):h.m=="TW"?(/\.TWO?$/.test(s)?s:s+".TW"):s};
+const tkl=h=>{const s=h.t.trim().toUpperCase();
+  if(h.m=="CRYPTO"){
+    if(s=="USDT")return "https://www.binance.com/en/price/tether";
+    if(s=="USDC")return "https://www.binance.com/en/price/usd-coin";
+    return "https://www.binance.com/en/trade/"+encodeURIComponent(s.endsWith("USDT")?s.slice(0,-4):s)+"_USDT?type=spot"}
+  if(ystk(h))return "https://finance.yahoo.com/quote/"+encodeURIComponent(ysym(h));
+  return ""};
+const tka=h=>{const u=tkl(h);return u?`<a class="tk" href="${esc(u)}" target="_blank" rel="noopener noreferrer" title="Open on ${h.m=="CRYPTO"?"Binance":"Yahoo Finance"}">${esc(h.t)}</a>`:esc(h.t)};
 async function prevClose(h){
   const s=h.t.trim().toUpperCase();
+  if(navurl(h))return (await navdata(h)).pv;
   if(h.m=="CRYPTO"){if(s=="USDT"||s=="USDC")return 1;return +(await j("https://api.binance.com/api/v3/ticker/24hr?symbol="+(s.endsWith("USDT")?s:s+"USDT"),5000)).openPrice}
   const d=await yj("https://query1.finance.yahoo.com/v8/finance/chart/"+encodeURIComponent(ysym(h))+"?interval=1d&range=5d");
   const c=((d.chart.result[0].indicators.quote[0]||{}).close||[]).filter(x=>x>0);
@@ -763,7 +802,7 @@ function snap(T){
 let HI=-1,HD=null,RG=sto.get("pt_hr");
 if(!["4h","1d","5d","1m","3m","ytd","1y","5y"].includes(RG))RG="1m";
 const rgs=()=>{$("#hr").value=RG};
-const fl=(t,it,full)=>{const p={};new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Kuala_Lumpur",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(t).forEach(x=>p[x.type]=x.value);const d=p.day+"-"+p.month;return it?d+(full?"-"+p.year:"")+" "+p.hour+":"+p.minute:d+"-"+p.year};
+const fl=(t,it,full)=>{const p={};new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Kuala_Lumpur",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(t).forEach(x=>p[x.type]=x.value);const d=p.day+" "+MON[+p.month-1]+" "+p.year.slice(2);return it?d+" "+p.hour+":"+p.minute:d};
 function hist(){
   const now=Date.now(),it=RG=="4h"||RG=="1d"||RG=="5d",el=$("#hc");let P;
   if(it){const c=now-({"4h":4,"1d":24,"5d":120}[RG])*36e5;P=INTRA.filter(e=>e[0]>=c)}
@@ -809,9 +848,10 @@ const pushU=e=>{UA.push(e);if(UA.length>20)UA.shift();updU()};
 const rest=(ref,prev)=>{Object.keys(ref).forEach(k=>delete ref[k]);Object.assign(ref,prev)};
 const say=(t,ok)=>{const m=$("#msg");m.textContent=t;m.style.color=ok?"var(--mu)":""};
 function updU(){const b=$("#ua"),e=UA[UA.length-1];b.disabled=!e;b.title=e?"Undo "+e.l:"Nothing to undo"}
+function fls(){const t=$("#ft").value.trim(),v=!(t&&$("#fm").value=="MYF"&&!/\.KL$/i.test(t));$("#nlw").hidden=v}
 function setMode(){const v=$("#fs").value;$("#fwl").textContent=v=="e"?"WAC":v=="s"?"Sale price":"Price paid"}
 $("#fs").onchange=setMode;
-$("#ua").onclick=()=>{const e=UA.pop();if(!e)return;const i=H.indexOf(e.ref);
+$("#ua").onclick=()=>{const e=UA.pop();if(!e)return;if(e.tx){const k=TX.indexOf(e.tx);if(k>=0){TX.splice(k,1);sto.set("pt_tx",JSON.stringify(TX));txr()}}const i=H.indexOf(e.ref);
   if(e.prev){if(i<0)H.splice(Math.min(e.idx,H.length),0,e.ref);rest(e.ref,e.prev)}else if(i>=0)H.splice(i,1);
   if(e.rl!=null)RL=e.rl;reset();say("Undid "+e.l+".",1);updU();save();render()};
 updU();
@@ -826,7 +866,7 @@ const tip=$("#ath-tip");
 $("#tb").addEventListener("mousemove",e=>{
   const c=e.target.closest("td.athc"),h=c&&H[+c.dataset.i];
   if(!h||!(h.ath>0)){tip.style.display="none";return}
-  tip.textContent=h.athd?"ATH date: "+h.athd.split("-").reverse().join("-"):"ATH date not available yet";
+  tip.textContent=h.athd?"ATH date: "+fd(h.athd):"ATH date not available yet";
   tip.style.display="block";
   const w=tip.offsetWidth,x=e.clientX+14;
   tip.style.left=(x+w>innerWidth-8?e.clientX-w-14:x)+"px";tip.style.top=(e.clientY+14)+"px"});
@@ -857,7 +897,8 @@ $("#ex").onclick=()=>{
     history: HIST,
     intraday: INTRA,
     targets: TG,
-    realized: RL
+    realized: RL,
+    transactions: TX
   };
   const a=document.createElement("a");
   a.href=URL.createObjectURL(new Blob([JSON.stringify(exportData,null,1)],{type:"application/json"}));
@@ -883,6 +924,7 @@ $("#im").onchange=e=>{
         if(Array.isArray(d.intraday)){INTRA=d.intraday;sto.set("pt_intra",JSON.stringify(INTRA))}
         if(d.targets&&typeof d.targets=="object"){TG=d.targets;$("#tgi").querySelectorAll("input").forEach(i=>i.value=TG[i.dataset.k]||"")}
         if(typeof d.realized=="number")RL=d.realized;
+        if(Array.isArray(d.transactions)){TX=okTx(d.transactions);sto.set("pt_tx",JSON.stringify(TX));TXP=0;txr()}
       } else {
         throw 0;
       }
@@ -898,11 +940,40 @@ $("#im").onchange=e=>{
 
 $("#rf").value=String(RF);
 $("#rf").onchange=()=>{RF=+$("#rf").value;sto.set("pt_rf",RF)};
-$("#pxs").onclick=()=>{yBad.fill(0);yF.fill(0);gBad=0;diag()};
+$("#pxs").onclick=()=>{yBad.fill(0);yF.fill(0);diag()};
 const ihd=Object.getOwnPropertyDescriptor(Element.prototype,"innerHTML");
 ["#tm","#tc","#tb","#tt","#hc","#tpl","#st","#donut-svg","#donut-legend"].forEach(q=>Object.defineProperty($(q),"innerHTML",{get(){return ihd.get.call(this)},set(v){if(this._h!==v){this._h=v;ihd.set.call(this,v)}}}));
 document.addEventListener("visibilitychange",()=>{if(!document.hidden){tick();getfx();loadDay();loadHi()}});
-renderNow();getfx();tick();loadHi();loadDay();
+const rec=(a,m,t,q,p,c,rl)=>{const x={ts:Date.now(),a,m,t,q,p,c};if(a=="s")x.rl=rl;TX.push(x);if(TX.length>5000)TX.shift();sto.set("pt_tx",JSON.stringify(TX));const u=UA[UA.length-1];if(u)u.tx=x;TXP=0;txr()};
+function txr(){
+  const w=$("#txw"),b=$("#txb"),on=sto.get("pt_txv")!=="0";
+  w.hidden=!on;b.textContent=on?"Hide transactions":"Show transactions ("+TX.length+")";b.setAttribute("aria-expanded",on);
+  if(!on)return;
+  const N=TX.length,pg=Math.max(1,Math.ceil(N/10));TXP=Math.min(Math.max(TXP,0),pg-1);
+  const L=TX.slice().reverse().slice(TXP*10,TXP*10+10);
+  $("#txt").innerHTML=N?"<thead><tr><th>Date (MYT)</th><th>Action</th><th>Ticker</th><th>Units</th><th>Price</th><th>Amount</th><th>Realized P/L (MYR)</th></tr></thead><tbody>"+L.map(x=>`<tr><td>${fl(x.ts,1,1)}</td><td>${x.a=="s"?"Sell":"Buy"}</td><td><b>${esc(x.t)}</b><span class="chip">${esc(x.c)}</span></td><td>${nf(+x.q,4)}</td><td>${px(+x.p)}</td><td>${nf(x.q*x.p)}</td><td class="${x.a=="s"?cl(x.rl):""}">${x.a=="s"&&isFinite(x.rl)?sg(x.rl):"–"}</td></tr>`).join("")+"</tbody>":"<tbody><tr><td>No transactions yet. Buys and sells you record above will be listed here.</td></tr></tbody>";
+  $("#txpg").innerHTML=N?`<button type="button" data-tp="-1"${TXP<=0?" disabled":""}>Previous</button><span>Page ${TXP+1} of ${pg} · ${N} transaction${N==1?"":"s"}</span><button type="button" data-tp="1"${TXP>=pg-1?" disabled":""}>Next</button>`:""}
+$("#txb").onclick=()=>{sto.set("pt_txv",sto.get("pt_txv")==="0"?"1":"0");txr()};
+$("#txpg").onclick=e=>{const b=e.target.closest("button");if(!b||b.disabled)return;TXP+=+b.dataset.tp;txr()};
+/* Holdings filters */
+const MFS=new Set();
+let CV=new Set(["ath","ytd"]);
+try{const v=JSON.parse(sto.get("pt_hc")||"null");if(Array.isArray(v))CV=new Set(v.filter(k=>k=="ath"||k=="ytd"))}catch(e){}
+const closeMs=()=>document.querySelectorAll(".mp").forEach(x=>x.hidden=true);
+function msMake(w,items,S,o){
+  const b=w.querySelector("button"),p=w.querySelector(".mp");
+  const draw=()=>{
+    p.innerHTML=(o.all?`<label><input type="checkbox" data-k="*"${S.size?"":" checked"}> ${o.all}</label>`:"")+items.map(([k,l])=>`<label><input type="checkbox" data-k="${k}"${S.has(k)?" checked":""}> ${esc(l)}</label>`).join("");
+    b.textContent=o.text(S)+" ▾"};
+  b.onclick=e=>{e.stopPropagation();const open=!p.hidden;closeMs();p.hidden=open};
+  p.onclick=e=>e.stopPropagation();
+  p.onchange=e=>{const k=e.target.dataset.k;if(k=="*")S.clear();else if(e.target.checked)S.add(k);else S.delete(k);draw();o.on()};
+  draw()}
+msMake($("#mfw"),MKS.map(k=>[k,MK[k].n]),MFS,{all:"All markets",text:S=>!S.size||S.size>=MKS.length?"All markets":S.size<=2?MKS.filter(k=>S.has(k)).map(k=>MK[k].n).join(", "):S.size+" markets",on:rows});
+msMake($("#cvw"),[["ath","ATH & vs ATH"],["ytd","YTD performance"]],CV,{text:()=>"Columns",on:()=>{sto.set("pt_hc",JSON.stringify([...CV]));rows()}});
+document.addEventListener("click",closeMs);
+document.addEventListener("keydown",e=>{if(e.key=="Escape")closeMs()});
+txr();renderNow();getfx();tick();loadHi();loadDay();
 setInterval(tick,1000);
 setInterval(getfx,300000);
 setInterval(loadHi,60000);setInterval(loadDay,60000);
