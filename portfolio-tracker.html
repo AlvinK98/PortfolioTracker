@@ -50,6 +50,8 @@ th{font-weight:500;color:var(--mu);font-size:0.78125rem;text-align:right;padding
 td{padding:7px 8px;text-align:right;border-bottom:1px solid var(--ln);white-space:nowrap}
 th:first-child,td:first-child{text-align:left}
 tr.g td{background:var(--ch);font-weight:600}
+.ccy{color:#2563eb}:root[data-theme=dark] .ccy{color:#60a5fa}
+#totop{position:fixed;right:20px;bottom:calc(20px + env(safe-area-inset-bottom,0px));width:42px;height:42px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--ac);color:var(--bg);border-color:var(--ac);box-shadow:0 6px 18px rgba(0,0,0,.35);z-index:50;opacity:0;visibility:hidden;transform:translateY(8px);transition:opacity .2s,transform .2s,visibility .2s}#totop.on{opacity:1;visibility:visible;transform:none}#totop:hover{filter:brightness(1.1)}
 .up{color:var(--up)}.dn{color:var(--dn)}
 a.tk{color:inherit;text-decoration:underline dotted;text-underline-offset:3px}a.tk:hover{color:var(--ac);text-decoration:underline}
 button:disabled{opacity:.45;cursor:default}button:disabled:hover{border-color:var(--ln)}
@@ -156,18 +158,18 @@ input,select{font-size:1rem}
     <h2 id="fh">Add holding or record a trade</h2>
     <div class="fm">
       <label hidden>Market<select id="fm"><option value="US">United States</option><option value="TW">Taiwan</option><option value="SG">Singapore</option><option value="CRYPTO">Crypto</option><option value="MYF">Malaysia</option></select></label>
-      <label>Action<select id="fs"><option value="b">Buy / add</option><option value="s">Sell</option><option value="e" hidden>Edit holding</option></select></label>
+      <label>Action<select id="fs"><option value="b">Buy / add</option><option value="s">Sell</option><option value="p">Stock split / reverse split</option><option value="e" hidden>Edit holding</option></select></label>
       <div class="sb"><label>Ticker / fund name<input id="ft" autocomplete="off" placeholder="Search ticker or company"></label><div id="sl" hidden></div></div>
-      <label>Units<input id="fq" type="number" step="any" min="0"></label>
-      <label><span id="fwl">Price paid</span><input id="fw" type="number" step="any" min="0"></label>
+      <label><span id="fql">Units</span><input id="fq" type="number" step="any" min="0"></label>
+      <label id="fwb"><span id="fwl">Price paid</span><input id="fw" type="number" step="any" min="0"></label>
       <label hidden>Currency<select id="fc"><option>USD</option><option>SGD</option><option>TWD</option><option>USDT</option><option>MYR</option></select></label>
-      <label id="nv">Current price (optional)<input id="fp" type="number" step="any" min="0" placeholder="Auto"></label>
+      <label id="nv"><span id="fpl">Current price (optional)</span><input id="fp" type="number" step="any" min="0" placeholder="Auto"></label>
       <label id="nlw" hidden style="grid-column:span 2">NAV table link (Principal funds, optional)<input id="nl" type="url" placeholder="https://www.principal.com.my/en/nav/…_format=csv"></label>
       <label hidden>ATH<input id="fa" type="number" step="any" min="0" placeholder="Auto"></label>
       <div><button class="pri" id="sv">Save</button> <button id="cn" hidden>Cancel</button> <button id="ua" type="button" disabled>Undo</button></div>
     </div>
     <div id="msg"></div>
-    <p class="note">Buying a ticker you already hold blends the units and WAC. Selling adds to realized P/L (in MYR at today’s rate) and removes the row when nothing is left.</p>
+    <p class="note">Buying a ticker you already hold blends the units and WAC. Selling adds to realized P/L (in MYR at today’s rate) and removes the row when nothing is left. A split multiplies your units and divides WAC and ATH by the ratio, then pulls the new live price (or use the New price field).</p>
     <div class="hd" style="margin:18px 0 8px"><h2>Transactions</h2><div><button id="txb" type="button"></button></div></div>
     <div id="txw"><div class="sc"><table id="txt"></table></div><div class="st" id="txpg" style="display:flex;gap:10px;align-items:center;justify-content:flex-end;margin-top:8px"></div></div>
   </section>
@@ -184,6 +186,7 @@ input,select{font-size:1rem}
       <li>The 5-year high and its date are built from daily highs and rechecked every 6 hours.</li>
       <li>For a MY mutual fund, the highest NAV you have entered is used as its ATH.</li>
       <li>YTD % compares the current price with the last close of the previous year. Manual-price funds show a dash.</li>
+      <li>Market hours and prices shown in <b style="color:#eab308">yellow</b> mean that the market is <b style="color:#eab308">currently open</b>.</li>
     </ol>
   </section>
 </main>
@@ -208,6 +211,7 @@ input,select{font-size:1rem}
   </div>
 </div>
 
+<button type="button" id="totop" title="Back to top" aria-label="Back to top"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg></button>
 <div id="ath-tip"></div><div id="h-tip"></div>
 <script>
 const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -224,7 +228,7 @@ const seed=[{id:1,m:"US",t:"AAPL",q:10,w:150,c:"USD",ath:0},{id:2,m:"TW",t:"2330
 let tmSort={col:"vm",dir:"desc"},tcSort={col:"vm",dir:"desc"},tbSort={col:"v",dir:"desc"};
 let H=[],fx={USD:4.2,SGD:3.2,TWD:0.135,USDT:4.2,MYR:1},man={},eid=null,last=null,busy=false;
 let HIST=[],INTRA=[],TG={},RL=0,TX=[],TXP=0;
-const okTx=a=>Array.isArray(a)?a.filter(x=>x&&isFinite(x.ts)&&(x.a=="b"||x.a=="s")):[];
+const okTx=a=>Array.isArray(a)?a.filter(x=>x&&isFinite(x.ts)&&(x.a=="b"||x.a=="s"||x.a=="p")):[];
 try{TX=okTx(JSON.parse(sto.get("pt_tx")||"[]"))}catch(e){TX=[]}
 
 try{
@@ -654,7 +658,7 @@ function renderNow(){
   const getTcVal=(k,col)=>{const a=bc[k];if(col=="name")return k;if(col=="v")return a.v;if(col=="vm"||col=="pct")return a.vm;if(col=="pl")return a.v-a.c;if(col=="pc")return a.c?(a.v-a.c)/a.c*100:0;return 0};
   const makeSortHd=(cols,srt,tbl)=>"<thead><tr>"+cols.map(([lbl,key])=>{
     const isS=srt.col===key,arr=isS?(srt.dir=="asc"?" ▲":" ▼"):"";
-    return`<th class="sortable" data-col="${key}" data-tbl="${tbl}">${esc(lbl)}${arr}</th>`
+    return`<th class="sortable" data-col="${key}" data-tbl="${tbl}">${tbl=="tm"&&key=="pl"?"P/L (<b class=\"ccy\">"+esc(aumCcy)+"</b>)":esc(lbl)}${arr}</th>`
   }).join("")+"</tr></thead>";
 
   const tmCols=[["Market","name"],["Holdings","n"],["Value (MYR)","vm"],["% of AUM","pct"],["P/L (MYR)","pl"],["P/L %","pc"]];
@@ -664,7 +668,7 @@ function renderNow(){
     return tmSort.dir=="asc"?va-vb:vb-va;
   });
   $("#tm").innerHTML=makeSortHd(tmCols,tmSort,"tm")+"<tbody>"+sortedMKS.map(k=>{const a=bm[k];
-    return`<tr><td><span class="sw" style="background:${MK[k].k}"></span>${MK[k].n}</td><td>${a.n}</td><td>${nf(a.vm)}</td><td>${nf(a.vm/T.vm*100,1)}%</td><td class="${cl(a.vm-a.cm)}">${sg(a.vm-a.cm)}</td><td class="${cl(pcm(a))}">${sg(pcm(a))}%</td></tr>`}).join("")+"</tbody>";
+    return`<tr><td><span class="sw" style="background:${MK[k].k}"></span>${MK[k].n}</td><td>${a.n}</td><td>${nf(a.vm)}</td><td>${nf(a.vm/T.vm*100,1)}%</td><td class="${cl(a.vm-a.cm)}">${sg(convertAum(a.vm-a.cm))}</td><td class="${cl(pcm(a))}">${sg(pcm(a))}%</td></tr>`}).join("")+"</tbody>";
 
   const tcCols=[["Currency","name"],["Value (market ccy)","v"],["Value (MYR)","vm"],["% of AUM","pct"],["P/L (market ccy)","pl"],["P/L %","pc"]];
   const sortedCUR=CUR.filter(k=>bc[k]).sort((ka,kb)=>{
@@ -712,7 +716,7 @@ document.addEventListener("click",e=>{
 });
 
 function rows(){
-  const gb=$("#gb").value,sa=CV.has("ath"),sy=CV.has("ytd");
+  const gb=$("#gb").value,sa=CV.has("ath"),sy=CV.has("ytd"),sp=CV.has("pl"),vc=getAumCcy();
   const L=H.map((h,i)=>({h,i,x:calc(h)})).filter(o=>!MFS.size||MFS.has(o.h.m))
     .sort((a,b)=>{
       let va, vb;
@@ -735,20 +739,20 @@ function rows(){
     });
   const gk=o=>gb?o.h[gb]:"",ord=gb=="m"?MKS:CUR;
   const keys=[...new Set(L.map(gk))].sort((a,b)=>ord.indexOf(a)-ord.indexOf(b));
-  const tbCols=[["Ticker","t"],["Units","q"],["WAC","w"],["Price","p"],["Day %","dc"],...(sa?[["ATH (5Y)","ath"],["vs ATH","vsAth"]]:[]),...(sy?[["YTD %","ytd"]]:[]),["P/L","pl"],["P/L %","pc"],["P/L (MYR)","plm"],["Value (MYR)","v"],["",""]];
+  const tbCols=[["Ticker","t"],["Units","q"],["WAC","w"],["Price","p"],["Day %","dc"],...(sa?[["ATH (5Y)","ath"],["vs ATH","vsAth"]]:[]),...(sy?[["YTD %","ytd"]]:[]),...(sp?[["Unrealized P/L","pl"],["Unrealized P/L %","pc"],["Unrealized P/L (MYR)","plm"]]:[]),["Value ("+vc+")","v"],["",""]];
   let s="<tr>"+tbCols.map(([lbl,key])=>{
     if(!key)return"<th></th>";
     const isS=tbSort.col===key,arr=isS?(tbSort.dir=="asc"?" ▲":" ▼"):"";
-    return`<th class="sortable" data-col="${key}" data-tbl="tb">${esc(lbl)}${arr}</th>`
+    return`<th class="sortable" data-col="${key}" data-tbl="tb">${key=="v"?"Value (<b class=\"ccy\">"+esc(vc)+"</b>)":key=="plm"?"Unrealized P/L (<b class=\"ccy\">"+esc(vc)+"</b>)":esc(lbl)}${arr}</th>`
   }).join("")+"</tr>";
   keys.forEach(k=>{const G=L.filter(o=>gk(o)==k);
     if(gb){const vm=G.reduce((a,o)=>a+o.x.vm,0),cm=G.reduce((a,o)=>a+o.x.cm,0);const gq=G.filter(o=>o.h.pv>0&&o.h.p>0),gq0=gq.reduce((a,o)=>a+o.h.q*o.h.pv*(fx[o.h.c]||1),0),gd=gq0?gq.reduce((a,o)=>a+o.h.q*(o.h.p-o.h.pv)*(fx[o.h.c]||1),0)/gq0*100:null;
       const gy0=G.filter(o=>ytdp(o.h)!=null),gyb=gy0.reduce((a,o)=>a+o.h.q*o.h.y0*(fx[o.h.c]||1),0),gyc=gy0.reduce((a,o)=>a+o.h.q*o.h.p*(fx[o.h.c]||1),0),gy=gyb?(gyc/gyb-1)*100:null;
-      s+=`<tr class="g"><td colspan="4"><span class="gl">${gb=="m"?MK[k].n+mkl(k):k}</span></td><td class="${cl(gd)}">${gd==null?"–":sg(gd)+"%"}</td>${sa?'<td colspan="2"></td>':""}${sy?`<td class="${cl(gy)}">${gy==null?"–":sg(gy)+"%"}</td>`:""}<td></td><td class="${cl(vm-cm)}">${sg(cm?(vm-cm)/cm*100:0)}%</td><td class="${cl(vm-cm)}">${sg(vm-cm)}</td><td>${nf(vm)}</td><td></td></tr>`}
+      s+=`<tr class="g"><td colspan="4"><span class="gl">${gb=="m"?MK[k].n+mkl(k):k}</span></td><td class="${cl(gd)}">${gd==null?"–":sg(gd)+"%"}</td>${sa?'<td colspan="2"></td>':""}${sy?`<td class="${cl(gy)}">${gy==null?"–":sg(gy)+"%"}</td>`:""}${sp?`<td></td><td class="${cl(vm-cm)}">${sg(cm?(vm-cm)/cm*100:0)}%</td><td class="${cl(vm-cm)}">${sg(convertAum(vm-cm))}</td>`:""}<td>${nf(convertAum(vm))}</td><td></td></tr>`}
     G.forEach(({h,i,x})=>{
       s+=`<tr><td><b>${tka(h)}</b>${h.n?" - "+esc(h.n.slice(0,28)):""}<span class="chip">${esc(h.c||(MK[h.m]?MK[h.m].c:""))}</span>${h.err&&auto(h)?'<span class="stale">stale</span>':""}</td>
       <td>${nf(+h.q,4)}</td><td>${px(h.w)}</td><td style="${isTrading(h.m) ? "color:#eab308;font-weight:600;" : ""}">${x.hv?px(h.p):"–"}</td><td class="${cl(dayp(h))}">${dayp(h)==null?"–":sg(dayp(h))+"%"}</td>${sa?`<td class="athc" data-i="${i}">${px(h.ath)}</td><td class="${cl(h.ath&&x.hv?h.p-h.ath:0)}">${h.ath>0&&x.hv?sg((h.p/h.ath-1)*100)+"%":"–"}</td>`:""}${sy?`<td class="${cl(ytdp(h))}">${ytdp(h)==null?"–":sg(ytdp(h))+"%"}</td>`:""}
-      <td class="${cl(x.pl)}">${x.hv?sg(x.pl):"–"}</td><td class="${cl(x.pl)}">${x.hv?sg(x.pc)+"%":"–"}</td><td class="${cl(x.vm-x.cm)}">${x.hv?sg(x.vm-x.cm):"–"}</td><td>${nf(x.vm)}</td>
+      ${sp?`<td class="${cl(x.pl)}">${x.hv?sg(x.pl):"–"}</td><td class="${cl(x.pl)}">${x.hv?sg(x.pc)+"%":"–"}</td><td class="${cl(x.vm-x.cm)}">${x.hv?sg(convertAum(x.vm-x.cm)):"–"}</td>`:""}<td>${nf(convertAum(x.vm))}</td>
       <td><button data-e="${i}" title="Edit" style="padding:4px 7px;line-height:1;display:inline-flex;align-items:center;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button><button data-d="${i}" title="Delete" style="padding:4px 7px;line-height:1;display:inline-flex;align-items:center;justify-content:center;color:var(--dn);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button></td></tr>`})});
   $("#tb").innerHTML=L.length?s:(H.length?"<tr><td>No holdings in the selected markets.</td></tr>":"<tr><td>No holdings yet. Add one above.</td></tr>")}
 $("#gb").onchange=rows;
@@ -770,11 +774,17 @@ $("#sv").onclick=()=>{
   if(nl&&!/^https:\/\/www\.principal\.com\.my\/en\/nav\/\S+_format=csv/i.test(nl)){say("The NAV table link must be the Principal Download CSV link (…/en/nav/…_format=csv).");return}
   const h=eid!=null?H[eid]:H.find(x=>x.m==m&&String(x.t).toUpperCase()==t);
   const pr=w!==""?+w:(act!="e"&&h&&h.p>0?h.p:NaN);
-  if(!(pr>=0)||(act!="e"&&!(pr>0))){say("Enter the price.");return}
+  if(act!="p"&&(!(pr>=0)||(act!="e"&&!(pr>0)))){say("Enter the price.");return}
   const cp=h?JSON.parse(JSON.stringify(h)):null,idx=h?H.indexOf(h):-1;let ok;
   if(act=="e"){
     pushU({ref:h,prev:cp,idx,l:"edit of "+h.t});
     Object.assign(h,{m,t,q:u,w:pr,c:MK[m].c,am:false,n:chosen.n,ns:nl,ath:m=="MYF"&&p!==""?Math.max(+p,h.ath||0):(h.ath||0),ht:0,dt:0,pv:0});if(p!=="")h.p=+p;if(m=="MYF"&&p!==""&&+p>(cp.ath||0))h.athd=hday();ok="Saved "+t+"."}
+  else if(act=="p"){
+    if(!h){say("You don't hold "+t+".");return}
+    if(Math.abs(u-1)<1e-9){say("Enter a ratio other than 1 (10 for a 10-for-1 split, 0.1 for a 1-for-10 reverse split).");return}
+    pushU({ref:h,prev:cp,idx,l:"split of "+t});
+    h.q*=u;h.w/=u;["ath","y0"].forEach(k=>{if(h[k]>0)h[k]/=u});h.pv=0;h.ht=0;h.dt=0;h.pt=0;if(p!=="")h.p=+p;else h.p=auto(h)?null:(h.p>0?h.p/u:h.p);
+    ok=t+" "+(u>1?nf(u,4).replace(/\.?0+$/,"")+"-for-1 split":"1-for-"+nf(1/u,4).replace(/\.?0+$/,"")+" reverse split")+" applied: now "+nf(h.q,4)+" units at WAC "+px(h.w)+".";rec("p",m,t,u,0,h.c)}
   else if(act=="s"){
     if(!h){say("You don't hold "+t+".");return}
     if(u>h.q+1e-9){say("You only hold "+nf(h.q,4)+" units.");return}
@@ -786,7 +796,8 @@ $("#sv").onclick=()=>{
   else{
     const nh={m,t,q:u,w:pr,c:MK[m].c,am:false,n:chosen.n,ns:nl,ath:m=="MYF"&&p!==""?+p:0,athd:m=="MYF"&&p!==""?hday():"",id:Date.now(),p:p===""?null:+p,ht:0};
     H.push(nh);pushU({ref:nh,l:"adding "+t});ok="Added "+t+".";rec("b",m,t,u,pr,MK[m].c)}
-  reset();say(ok,1);save();render();tick();loadHi();loadDay()};
+  reset();say(ok,1);save();render();tick();loadHi();loadDay();if(act=="p"&&p===""&&auto(h))getNew(h)};
+async function getNew(h){for(let i=0;i<3;i++){try{h.p=await price(h);h.err=0;h.pt=Date.now();save();render();loadDay();return}catch(e){await sleep(1500)}}if(H.includes(h)&&!(h.p>0))say("Could not fetch the new price for "+h.t+". Click Edit on the holding and enter it in Current price.")}
 
 /* FX */
 $("#fx").innerHTML=["USD","SGD","TWD","USDT"].map(c=>`<label>1 ${c} = <input type="number" step="any" data-c="${c}"> MYR</label>`).join("")+'<button id="au">Auto rates</button><span>USDT follows USD unless you edit it.</span>';
@@ -851,7 +862,7 @@ function hist(){
     else seg(x0,v0,c0,x1,v1,c1,col(d0+d1))}
   const mk=HI>=0&&HI<n?`<line x1="${f(X(HI))}" x2="${f(X(HI))}" y1="${pt}" y2="${Ht-pb}" stroke="var(--mu)" stroke-dasharray="3 3"/><circle cx="${f(X(HI))}" cy="${f(Y(C[HI]))}" r="3.5" fill="#eab308"/><circle cx="${f(X(HI))}" cy="${f(Y(V[HI]))}" r="3.5" fill="${col(V[HI]-C[HI])}"/>`:"";
   HD={Tm,V,C,W,pl,pr,t0,td,it};
-  el.innerHTML=`<svg viewBox="0 0 ${W} ${Ht}" style="width:100%;height:auto;display:block" role="img" aria-label="Portfolio value and cost over time"><g stroke="var(--ln)"><line x1="${pl}" x2="${W-pr}" y1="${f(Y(hi))}" y2="${f(Y(hi))}"/><line x1="${pl}" x2="${W-pr}" y1="${f(Y(lo))}" y2="${f(Y(lo))}"/></g>${ar}<path d="${Pt(C)}" fill="none" stroke="#eab308" stroke-width="2"/><g fill="none" stroke-width="2">${ln}</g>${mk}<g fill="var(--mu)" font-size="11"><text x="${pl-6}" y="${f(Y(hi)+3)}" text-anchor="end">${nf(hi,0)}</text><text x="${pl-6}" y="${f(Y(lo)+3)}" text-anchor="end">${nf(lo,0)}</text><text x="${pl}" y="${Ht-6}">${fl(Tm[0],it)}</text><text x="${W-pr}" y="${Ht-6}" text-anchor="end">${fl(Tm[n-1],it)}</text></g></svg><div class="st"><span style="color:#eab308">━</span> Cost &nbsp;<span style="color:var(--up)">▮</span> Profit (above cost) &nbsp;<span style="color:var(--dn)">▮</span> Loss (below cost) · Shown in ${getAumCcy()}</div>`}
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${Ht}" style="width:100%;height:auto;display:block" role="img" aria-label="Portfolio value and cost over time"><g stroke="var(--ln)"><line x1="${pl}" x2="${W-pr}" y1="${f(Y(hi))}" y2="${f(Y(hi))}"/><line x1="${pl}" x2="${W-pr}" y1="${f(Y(lo))}" y2="${f(Y(lo))}"/></g>${ar}<path d="${Pt(C)}" fill="none" stroke="#eab308" stroke-width="2"/><g fill="none" stroke-width="2">${ln}</g>${mk}<g fill="var(--mu)" font-size="11"><text x="${pl-6}" y="${f(Y(hi)+3)}" text-anchor="end">${nf(hi,0)}</text><text x="${pl-6}" y="${f(Y(lo)+3)}" text-anchor="end">${nf(lo,0)}</text><text x="${pl}" y="${Ht-6}">${fl(Tm[0],it)}</text><text x="${W-pr}" y="${Ht-6}" text-anchor="end">${fl(Tm[n-1],it)}</text></g></svg><div class="st"><span style="color:#eab308">━</span> Cost &nbsp;<span style="color:var(--up)">▮</span> Profit (above cost) &nbsp;<span style="color:var(--dn)">▮</span> Loss (below cost) · Shown in <b class="ccy">${getAumCcy()}</b></div>`}
 $("#hr").onchange=()=>{RG=$("#hr").value;sto.set("pt_hr",RG);HI=-1;hist()};
 rgs();
 const htp=$("#h-tip");
@@ -881,7 +892,7 @@ const rest=(ref,prev)=>{Object.keys(ref).forEach(k=>delete ref[k]);Object.assign
 const say=(t,ok)=>{const m=$("#msg");m.textContent=t;m.style.color=ok?"var(--mu)":""};
 function updU(){const b=$("#ua"),e=UA[UA.length-1];b.disabled=!e;b.title=e?"Undo "+e.l:"Nothing to undo"}
 function fls(){const t=$("#ft").value.trim(),v=!(t&&$("#fm").value=="MYF"&&!/\.KL$/i.test(t));$("#nlw").hidden=v}
-function setMode(){const v=$("#fs").value;$("#fwl").textContent=v=="e"?"WAC":v=="s"?"Sale price":"Price paid"}
+function setMode(){const v=$("#fs").value,p=v=="p";$("#fwl").textContent=v=="e"?"WAC":v=="s"?"Sale price":"Price paid";$("#fql").textContent=p?"Split ratio (new shares per 1 old)":"Units";$("#fq").placeholder=p?"10 = 10-for-1, 0.1 = 1-for-10":"";$("#fwb").hidden=p;$("#fpl").textContent=p?"New price after split (optional)":"Current price (optional)"}
 $("#fs").onchange=setMode;
 $("#ua").onclick=()=>{const e=UA.pop();if(!e)return;if(e.tx){const k=TX.indexOf(e.tx);if(k>=0){TX.splice(k,1);sto.set("pt_tx",JSON.stringify(TX));txr()}}const i=H.indexOf(e.ref);
   if(e.prev){if(i<0)H.splice(Math.min(e.idx,H.length),0,e.ref);rest(e.ref,e.prev)}else if(i>=0)H.splice(i,1);
@@ -983,14 +994,14 @@ function txr(){
   if(!on)return;
   const N=TX.length,pg=Math.max(1,Math.ceil(N/10));TXP=Math.min(Math.max(TXP,0),pg-1);
   const L=TX.slice().reverse().slice(TXP*10,TXP*10+10);
-  $("#txt").innerHTML=N?"<thead><tr><th>Date (MYT)</th><th>Action</th><th>Ticker</th><th>Units</th><th>Price</th><th>Amount</th><th>Realized P/L (MYR)</th></tr></thead><tbody>"+L.map(x=>`<tr><td>${fl(x.ts,1,1)}</td><td>${x.a=="s"?"Sell":"Buy"}</td><td><b>${esc(x.t)}</b><span class="chip">${esc(x.c)}</span></td><td>${nf(+x.q,4)}</td><td>${px(+x.p)}</td><td>${nf(x.q*x.p)}</td><td class="${x.a=="s"?cl(x.rl):""}">${x.a=="s"&&isFinite(x.rl)?sg(x.rl):"–"}</td></tr>`).join("")+"</tbody>":"<tbody><tr><td>No transactions yet. Buys and sells you record above will be listed here.</td></tr></tbody>";
+  $("#txt").innerHTML=N?"<thead><tr><th>Date (MYT)</th><th>Action</th><th>Ticker</th><th>Units</th><th>Price</th><th>Amount</th><th>Realized P/L (MYR)</th></tr></thead><tbody>"+L.map(x=>`<tr><td>${fl(x.ts,1,1)}</td><td>${x.a=="s"?"Sell":x.a=="p"?"Split":"Buy"}</td><td><b>${esc(x.t)}</b><span class="chip">${esc(x.c)}</span></td><td>${x.a=="p"?"×"+(+(+x.q).toFixed(6)):nf(+x.q,4)}</td><td>${x.a=="p"?"–":px(+x.p)}</td><td>${x.a=="p"?"–":nf(x.q*x.p)}</td><td class="${x.a=="s"?cl(x.rl):""}">${x.a=="s"&&isFinite(x.rl)?sg(x.rl):"–"}</td></tr>`).join("")+"</tbody>":"<tbody><tr><td>No transactions yet. Buys and sells you record above will be listed here.</td></tr></tbody>";
   $("#txpg").innerHTML=N?`<button type="button" data-tp="-1"${TXP<=0?" disabled":""}>Previous</button><span>Page ${TXP+1} of ${pg} · ${N} transaction${N==1?"":"s"}</span><button type="button" data-tp="1"${TXP>=pg-1?" disabled":""}>Next</button>`:""}
 $("#txb").onclick=()=>{sto.set("pt_txv",sto.get("pt_txv")==="0"?"1":"0");txr()};
 $("#txpg").onclick=e=>{const b=e.target.closest("button");if(!b||b.disabled)return;TXP+=+b.dataset.tp;txr()};
 /* Holdings filters */
 const MFS=new Set();
-let CV=new Set(["ath","ytd"]);
-try{const v=JSON.parse(sto.get("pt_hc")||"null");if(Array.isArray(v))CV=new Set(v.filter(k=>k=="ath"||k=="ytd"))}catch(e){}
+let CV=new Set(["ath","ytd","pl"]);
+try{const v=JSON.parse(sto.get("pt_hc")||"null");if(Array.isArray(v)){CV=new Set(v.filter(k=>k=="ath"||k=="ytd"||k=="pl"));if(!v.includes("v2"))CV.add("pl")}}catch(e){}
 const closeMs=()=>document.querySelectorAll(".mp").forEach(x=>x.hidden=true);
 function msMake(w,items,S,o){
   const b=w.querySelector("button"),p=w.querySelector(".mp");
@@ -1002,7 +1013,7 @@ function msMake(w,items,S,o){
   p.onchange=e=>{const k=e.target.dataset.k;if(k=="*")S.clear();else if(e.target.checked)S.add(k);else S.delete(k);draw();o.on()};
   draw()}
 msMake($("#mfw"),MKS.map(k=>[k,MK[k].n]),MFS,{all:"All markets",text:S=>!S.size||S.size>=MKS.length?"All markets":S.size<=2?MKS.filter(k=>S.has(k)).map(k=>MK[k].n).join(", "):S.size+" markets",on:rows});
-msMake($("#cvw"),[["ath","ATH & vs ATH"],["ytd","YTD performance"]],CV,{text:()=>"Columns",on:()=>{sto.set("pt_hc",JSON.stringify([...CV]));rows()}});
+msMake($("#cvw"),[["ath","ATH & vs ATH"],["ytd","YTD performance"],["pl","Unrealized P/L columns"]],CV,{text:()=>"Columns",on:()=>{sto.set("pt_hc",JSON.stringify([...CV,"v2"]));rows()}});
 document.addEventListener("click",closeMs);
 document.addEventListener("keydown",e=>{if(e.key=="Escape")closeMs()});
 txr();renderNow();getfx();tick();loadHi();loadDay();
@@ -1010,6 +1021,13 @@ setInterval(tick,1000);
 setInterval(getfx,300000);
 setInterval(loadHi,60000);setInterval(loadDay,60000);
 setInterval(livePx,20000);
+
+/* back to top */
+(function(){
+  const b=$("#totop"),chk=()=>b.classList.toggle("on",(window.scrollY||document.documentElement.scrollTop)>300);
+  addEventListener("scroll",chk,{passive:true});chk();
+  b.onclick=()=>scrollTo({top:0,behavior:"smooth"});
+})();
 
 /* legal modal */
 (function(){
