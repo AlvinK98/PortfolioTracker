@@ -57,6 +57,7 @@ td{padding:7px 8px;text-align:right;border-bottom:1px solid var(--ln);white-spac
 th:first-child,td:first-child{text-align:left}
 tr.g td{background:var(--ch);font-weight:600}
 .up{color:var(--up)}.dn{color:var(--dn)}
+.ccy{color:#2563eb}:root[data-theme=dark] .ccy{color:#60a5fa}
 a.tk{color:inherit;text-decoration:underline dotted;text-underline-offset:3px}a.tk:hover{color:var(--ac);text-decoration:underline}
 button:disabled{opacity:.45;cursor:default}button:disabled:hover{border-color:var(--ln)}
 #tb th:first-child,#tb td:first-child{position:sticky;left:0;z-index:1;background:var(--pn);box-shadow:inset -1px 0 0 var(--ln)}
@@ -147,7 +148,7 @@ input,select{font-size:1rem}
     <section class="hero-flex">
     <div class="hero-left">
       <div class="lb">Total AUM</div>
-      <div class="aum"><span id="aum-n"></span><select id="aum-ccy" aria-label="Currency"><option value="MYR">MYR</option><option value="SGD">SGD</option><option value="TWD">TWD</option><option value="USD">USD</option></select></div>
+      <div class="aum"><span id="aum-n"></span><select id="aum-ccy" aria-label="Currency"><option value="CNY">CNY</option><option value="GBP">GBP</option><option value="HKD">HKD</option><option value="JPY">JPY</option><option value="KRW">KRW</option><option value="MYR">MYR</option><option value="SGD">SGD</option><option value="TWD">TWD</option><option value="USD">USD</option></select></div>
       <div id="tpl"></div>
     </div>
     <div class="donut-box">
@@ -238,7 +239,7 @@ const MK={
   US:{n:"United States",c:"USD",k:"#2563eb",pat:"url(#pat-us)",css:"repeating-linear-gradient(45deg,#2563eb,#2563eb 3px,rgba(255,255,255,0.5) 3px,rgba(255,255,255,0.5) 6px)"}
 };
 Object.assign(MK,{CN:{n:"China",c:"CNY",k:"#dc2626"},JP:{n:"Japan",c:"JPY",k:"#ec4899"},UK:{n:"United Kingdom",c:"GBP",k:"#f97316"},KR:{n:"South Korea",c:"KRW",k:"#64748b"},HK:{n:"Hong Kong",c:"HKD",k:"#84cc16"}});
-const MKS=Object.keys(MK).sort((a,b)=>MK[a].n.localeCompare(MK[b].n)),CUR=["USD","SGD","TWD","USDT","MYR","CNY","JPY","GBP","KRW","HKD"];
+const MKS=Object.keys(MK).sort((a,b)=>MK[a].n.localeCompare(MK[b].n)),CUR=["CNY","GBP","HKD","JPY","KRW","MYR","SGD","TWD","USD","USDT"];
 const seed=[{id:1,m:"US",t:"AAPL",q:10,w:150,c:"USD",ath:0},{id:2,m:"TW",t:"2330.TW",q:100,w:900,c:"TWD",ath:0},{id:3,m:"CRYPTO",t:"BTC",q:0.05,w:60000,c:"USDT",ath:0},{id:4,m:"MYF",t:"Sample fund",q:1000,w:1,c:"MYR",p:1.1,ath:1.2}];
 let tmSort={col:"vm",dir:"desc"},tcSort={col:"vm",dir:"desc"},tbSort={col:"v",dir:"desc"};
 let H=[],fx={USD:4.2,SGD:3.2,TWD:0.135,USDT:4.2,MYR:1,CNY:0.59,JPY:0.028,GBP:5.5,KRW:0.003,HKD:0.54},man={},eid=null,last=null,busy=false;
@@ -286,13 +287,7 @@ const cl=v=>v>0.005?"up":v<-0.005?"dn":"";
 
 /* AUM Currency conversion helper */
 function getAumCcy(){return $("#aum-ccy")?$("#aum-ccy").value:"MYR"}
-function convertAum(valMYR){
-  const ccy=getAumCcy();
-  if(ccy=="SGD")return valMYR/(fx.SGD||3.2);
-  if(ccy=="TWD")return valMYR/(fx.TWD||0.135);
-  if(ccy=="USD")return valMYR/(fx.USD||4.2);
-  return valMYR;
-}
+function convertAum(valMYR){const c=getAumCcy();return c=="MYR"?valMYR:valMYR/(fx[c]||1)}
 
 function nyNow(){const p={};new Intl.DateTimeFormat("en-US",{timeZone:"America/New_York",weekday:"short",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(new Date()).forEach(x=>p[x.type]=x.value);return{wd:p.weekday,min:(+p.hour)*60+(+p.minute)}}
 function nyOff(){const d=new Date(),f=z=>new Date(d.toLocaleString("en-US",{timeZone:z}));return Math.round((f("America/New_York")-f("UTC"))/36e5)}
@@ -673,6 +668,7 @@ function renderDonut(bm, totalVM, aumCcy){
 }
 
 /* render */
+const hl=l=>esc(l).replace(/\{([A-Z]+)\}/g,'<span class="ccy">$1</span>');
 let rq=0;function render(){clearTimeout(rq);rq=setTimeout(renderNow,30)}
 function renderNow(){
   const T=agg(()=>"all").all||{vm:0,cm:0},bm=agg(h=>h.m),bc=agg(h=>h.c);
@@ -693,26 +689,26 @@ function renderNow(){
   const getTcVal=(k,col)=>{const a=bc[k];if(col=="name")return k;if(col=="v")return a.v;if(col=="vm"||col=="pct")return a.vm;if(col=="pl")return a.v-a.c;if(col=="pc")return a.c?(a.v-a.c)/a.c*100:0;return 0};
   const makeSortHd=(cols,srt,tbl)=>"<thead><tr>"+cols.map(([lbl,key])=>{
     const isS=srt.col===key,arr=isS?(srt.dir=="asc"?" ▲":" ▼"):"";
-    return`<th class="sortable" data-col="${key}" data-tbl="${tbl}">${esc(lbl)}${arr}</th>`
+    return`<th class="sortable" data-col="${key}" data-tbl="${tbl}">${hl(lbl)}${arr}</th>`
   }).join("")+"</tr></thead>";
 
-  const tmCols=[["Market","name"],["Holdings","n"],["Value (MYR)","vm"],["% of AUM","pct"],["P/L (MYR)","pl"],["P/L %","pc"]];
+  const tmCols=[["Market","name"],["Holdings","n"],["Value ({"+aumCcy+"})","vm"],["% of AUM","pct"],["P/L ({"+aumCcy+"})","pl"],["P/L %","pc"]];
   const sortedMKS=MKS.filter(k=>bm[k]).sort((ka,kb)=>{
     const va=getTmVal(ka,tmSort.col),vb=getTmVal(kb,tmSort.col);
     if(typeof va=="string")return tmSort.dir=="asc"?va.localeCompare(vb):vb.localeCompare(va);
     return tmSort.dir=="asc"?va-vb:vb-va;
   });
   $("#tm").innerHTML=makeSortHd(tmCols,tmSort,"tm")+"<tbody>"+sortedMKS.map(k=>{const a=bm[k];
-    return`<tr><td><span class="sw" style="background:${MK[k].k}"></span>${MK[k].n}</td><td>${a.n}</td><td>${nf(a.vm)}</td><td>${nf(a.vm/T.vm*100,1)}%</td><td class="${cl(a.vm-a.cm)}">${sg(a.vm-a.cm)}</td><td class="${cl(pcm(a))}">${sg(pcm(a))}%</td></tr>`}).join("")+"</tbody>";
+    return`<tr><td><span class="sw" style="background:${MK[k].k}"></span>${MK[k].n}</td><td>${a.n}</td><td>${nf(convertAum(a.vm))}</td><td>${nf(a.vm/T.vm*100,1)}%</td><td class="${cl(a.vm-a.cm)}">${sg(convertAum(a.vm-a.cm))}</td><td class="${cl(pcm(a))}">${sg(pcm(a))}%</td></tr>`}).join("")+"</tbody>";
 
-  const tcCols=[["Currency","name"],["Value (market ccy)","v"],["Value (MYR)","vm"],["% of AUM","pct"],["P/L (market ccy)","pl"],["P/L %","pc"]];
+  const tcCols=[["Currency","name"],["Value (market ccy)","v"],["Value ({"+aumCcy+"})","vm"],["% of AUM","pct"],["P/L (market ccy)","pl"],["P/L %","pc"]];
   const sortedCUR=CUR.filter(k=>bc[k]).sort((ka,kb)=>{
     const va=getTcVal(ka,tcSort.col),vb=getTcVal(kb,tcSort.col);
     if(typeof va=="string")return tcSort.dir=="asc"?va.localeCompare(vb):vb.localeCompare(va);
     return tcSort.dir=="asc"?va-vb:vb-va;
   });
   $("#tc").innerHTML=makeSortHd(tcCols,tcSort,"tc")+"<tbody>"+sortedCUR.map(k=>{const a=bc[k];
-    return`<tr><td>${k}</td><td>${nf(a.v)}</td><td>${nf(a.vm)}</td><td>${nf(a.vm/T.vm*100,1)}%</td><td class="${cl(a.v-a.c)}">${sg(a.v-a.c)}</td><td class="${cl(a.c?(a.v-a.c)/a.c:0)}">${sg(a.c?(a.v-a.c)/a.c*100:0)}%</td></tr>`}).join("")+"</tbody>";
+    return`<tr><td>${k}</td><td>${nf(a.v)}</td><td>${nf(convertAum(a.vm))}</td><td>${nf(a.vm/T.vm*100,1)}%</td><td class="${cl(a.v-a.c)}">${sg(a.v-a.c)}</td><td class="${cl(a.c?(a.v-a.c)/a.c:0)}">${sg(a.c?(a.v-a.c)/a.c*100:0)}%</td></tr>`}).join("")+"</tbody>";
   rows();fxs();hist();tgt();
   const bad = H.filter(h => h.m != "MYF" && h.err).length;
   const timeStr = last ? "Updated " + getMYT(last) : "Connecting…";
@@ -775,20 +771,20 @@ function rows(){
     });
   const gk=o=>gb?o.h[gb]:"",ord=gb=="m"?MKS:CUR;
   const keys=[...new Set(L.map(gk))].sort((a,b)=>ord.indexOf(a)-ord.indexOf(b));
-  const tbCols=[["Ticker","t"],["Units","q"],["WAC","w"],["Price","p"],["Day %","dc"],...(sa?[["ATH (5Y)","ath"],["vs ATH","vsAth"]]:[]),...(sm?[["MoM %","mom"],["QoQ %","qoq"],["YoY %","yoy"]]:[]),...(sy?[["YTD %","ytd"]]:[]),["P/L","pl"],["P/L %","pc"],["P/L (MYR)","plm"],["Value (MYR)","v"],["",""]];
+  const tbCols=[["Ticker","t"],["Units","q"],["WAC","w"],["Price","p"],["Day %","dc"],...(sa?[["ATH (5Y)","ath"],["vs ATH","vsAth"]]:[]),...(sm?[["MoM %","mom"],["QoQ %","qoq"],["YoY %","yoy"]]:[]),...(sy?[["YTD %","ytd"]]:[]),["P/L","pl"],["P/L %","pc"],["P/L ({"+getAumCcy()+"})","plm"],["Value ({"+getAumCcy()+"})","v"],["",""]];
   let s="<tr>"+tbCols.map(([lbl,key])=>{
     if(!key)return"<th></th>";
     const isS=tbSort.col===key,arr=isS?(tbSort.dir=="asc"?" ▲":" ▼"):"";
-    return`<th class="sortable" data-col="${key}" data-tbl="tb">${esc(lbl)}${arr}</th>`
+    return`<th class="sortable" data-col="${key}" data-tbl="tb">${hl(lbl)}${arr}</th>`
   }).join("")+"</tr>";
   keys.forEach(k=>{const G=L.filter(o=>gk(o)==k);
     if(gb){const vm=G.reduce((a,o)=>a+o.x.vm,0),cm=G.reduce((a,o)=>a+o.x.cm,0);const gq=G.filter(o=>o.h.pv>0&&o.h.p>0),gq0=gq.reduce((a,o)=>a+o.h.q*o.h.pv*(fx[o.h.c]||1),0),gd=gq0?gq.reduce((a,o)=>a+o.h.q*(o.h.p-o.h.pv)*(fx[o.h.c]||1),0)/gq0*100:null;
       const gy0=G.filter(o=>ytdp(o.h)!=null),gyb=gy0.reduce((a,o)=>a+o.h.q*o.h.y0*(fx[o.h.c]||1),0),gyc=gy0.reduce((a,o)=>a+o.h.q*o.h.p*(fx[o.h.c]||1),0),gy=gyb?(gyc/gyb-1)*100:null;
-      s+=`<tr class="g"><td colspan="4"><span class="gl">${gb=="m"?MK[k].n+mkl(k):k}</span></td><td class="${cl(gd)}">${gd==null?"–":sg(gd)+"%"}</td>${sa?'<td colspan="2"></td>':""}${sm?PG(G):""}${sy?`<td class="${cl(gy)}">${gy==null?"–":sg(gy)+"%"}</td>`:""}<td></td><td class="${cl(vm-cm)}">${sg(cm?(vm-cm)/cm*100:0)}%</td><td class="${cl(vm-cm)}">${sg(vm-cm)}</td><td>${nf(vm)}</td><td></td></tr>`}
+      s+=`<tr class="g"><td colspan="4"><span class="gl">${gb=="m"?MK[k].n+mkl(k):k}</span></td><td class="${cl(gd)}">${gd==null?"–":sg(gd)+"%"}</td>${sa?'<td colspan="2"></td>':""}${sm?PG(G):""}${sy?`<td class="${cl(gy)}">${gy==null?"–":sg(gy)+"%"}</td>`:""}<td></td><td class="${cl(vm-cm)}">${sg(cm?(vm-cm)/cm*100:0)}%</td><td class="${cl(vm-cm)}">${sg(convertAum(vm-cm))}</td><td>${nf(convertAum(vm))}</td><td></td></tr>`}
     G.forEach(({h,i,x})=>{
       s+=`<tr><td><b>${tka(h)}</b>${h.n?" - "+esc(h.n.slice(0,28)):""}<span class="chip">${esc(h.c||(MK[h.m]?MK[h.m].c:""))}</span>${h.err&&auto(h)?'<span class="stale">stale</span>':""}</td>
       <td>${nf(+h.q,h.m=="TW"?0:4)}</td><td>${px(h.w)}</td><td style="${isTrading(h.m) ? "color:#eab308;font-weight:600;" : ""}">${x.hv?px(h.p):"–"}</td><td class="${cl(dayp(h))}">${dayp(h)==null?"–":sg(dayp(h))+"%"}</td>${sa?`<td class="athc" data-i="${i}">${px(h.ath)}</td><td class="${cl(h.ath&&x.hv?h.p-h.ath:0)}">${h.ath>0&&x.hv?sg((h.p/h.ath-1)*100)+"%":"–"}</td>`:""}${sm?PR(h):""}${sy?`<td class="${cl(ytdp(h))}">${ytdp(h)==null?"–":sg(ytdp(h))+"%"}</td>`:""}
-      <td class="${cl(x.pl)}">${x.hv?sg(x.pl):"–"}</td><td class="${cl(x.pl)}">${x.hv?sg(x.pc)+"%":"–"}</td><td class="${cl(x.vm-x.cm)}">${x.hv?sg(x.vm-x.cm):"–"}</td><td>${nf(x.vm)}</td>
+      <td class="${cl(x.pl)}">${x.hv?sg(x.pl):"–"}</td><td class="${cl(x.pl)}">${x.hv?sg(x.pc)+"%":"–"}</td><td class="${cl(x.vm-x.cm)}">${x.hv?sg(convertAum(x.vm-x.cm)):"–"}</td><td>${nf(convertAum(x.vm))}</td>
       <td><button data-e="${i}" title="Edit" style="padding:4px 7px;line-height:1;display:inline-flex;align-items:center;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button><button data-d="${i}" title="Delete" style="padding:4px 7px;line-height:1;display:inline-flex;align-items:center;justify-content:center;color:var(--dn);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button></td></tr>`})});
   $("#tb").innerHTML=L.length?s:(H.length?"<tr><td>No holdings in the selected markets.</td></tr>":"<tr><td>No holdings yet. Add one above.</td></tr>")}
 $("#gb").onchange=rows;
@@ -836,7 +832,7 @@ $("#sv").onclick=()=>{
 async function getNew(h){for(let i=0;i<3;i++){try{h.p=await price(h);h.err=0;h.pt=Date.now();save();render();loadDay();return}catch(e){await sleep(1500)}}if(H.includes(h)&&!(h.p>0))say("Could not fetch the new price for "+h.t+". Click Edit on the holding and enter it in Current price.")}
 
 /* FX */
-const FXU={JPY:100,KRW:1000},FXL=["USD","SGD","TWD","USDT","CNY","JPY","GBP","KRW","HKD"];
+const FXU={JPY:100,KRW:1000},FXL=["CNY","GBP","HKD","JPY","KRW","SGD","TWD","USD","USDT"];
 let FXC=sto.get("pt_fxc");if(!FXL.includes(FXC))FXC="USD";
 $("#fx").innerHTML='<select id="fxs" aria-label="Currency">'+FXL.map(c=>`<option${c==FXC?" selected":""}>${c}</option>`).join("")+'</select>'+FXL.map(c=>`<label data-lc="${c}"${c==FXC?"":" hidden"}>${FXU[c]||1} ${c} = <input type="number" step="any" data-c="${c}"> MYR</label>`).join("")+'<button id="au">Auto rates</button><span>USDT follows USD unless you edit it.</span>';
 $("#fx").onchange=e=>{if(e.target.id!="fxs")return;FXC=e.target.value;sto.set("pt_fxc",FXC);document.querySelectorAll("#fx label[data-lc]").forEach(l=>l.hidden=l.dataset.lc!=FXC)};
@@ -929,7 +925,7 @@ $("#hc").addEventListener("pointerleave",e=>{if(e.pointerType!="mouse")return;HI
 
 function tgt(){
   const bm=agg(h=>h.m),T=Object.values(bm).reduce((a,x)=>a+x.vm,0),sum=MKS.reduce((a,k)=>a+(+TG[k]||0),0),ccy=getAumCcy(),ks=MKS.filter(k=>(+TG[k]>0)||(bm[k]&&bm[k].vm>0));
-  $("#tt").innerHTML="<thead><tr><th>Market</th><th>Actual %</th><th>Target %</th><th>Drift</th><th>To rebalance ("+ccy+")</th></tr></thead><tbody>"+(sum>0?ks.map(k=>{
+  $("#tt").innerHTML="<thead><tr><th>Market</th><th>Actual %</th><th>Target %</th><th>Drift</th><th>To rebalance (<span class='ccy'>"+ccy+"</span>)</th></tr></thead><tbody>"+(sum>0?ks.map(k=>{
     const a=bm[k]?bm[k].vm:0,ap=T?a/T*100:0,tp=+TG[k]||0,dr=ap-tp,mv=convertAum(tp/100*T-a);
     return`<tr><td><span class="sw" style="background:${MK[k].k}"></span>${MK[k].n}</td><td>${nf(ap,1)}%</td><td>${nf(tp,1)}%</td><td style="${Math.abs(dr)>=5?"color:#d98a1c;font-weight:600":""}">${sg(dr,1)}%</td><td>${Math.abs(mv)<0.5?"On target":(mv>0?"Buy ":"Sell ")+nf(Math.abs(mv),0)}</td></tr>`}).join(""):"<tr><td>Enter a target % for each market above.</td></tr>")+"</tbody>";
   $("#tgn").textContent=sum>0&&Math.abs(sum-100)>0.01?"Targets add up to "+nf(sum,1)+"%, not 100%. Amounts use the targets as entered.":"Drift of 5 points or more is highlighted. Amounts are based on current value."}
