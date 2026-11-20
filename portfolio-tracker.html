@@ -9,8 +9,8 @@
 :root[data-theme=dark]{color-scheme:dark;--bg:#0d171e;--pn:#14222c;--ink:#e6edf1;--mu:#92a3af;--ln:#25363f;--ac:#5fc3dc;--up:#3fcf94;--dn:#ff7a68;--ch:#1d2f3a}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:.9375rem/1.45 "Avenir Next","Segoe UI",system-ui,sans-serif;font-variant-numeric:tabular-nums}
-header{position:sticky;top:0;z-index:40;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:10px max(24px,calc(50% - 576px));background:var(--bg);border-bottom:1px solid var(--ln);margin-bottom:16px}
-h1{font-size:1.125rem;margin:0;font-weight:650;display:flex;align-items:center;gap:10px}
+header{position:sticky;top:0;z-index:40;display:flex;flex-wrap:nowrap;gap:12px;align-items:center;justify-content:space-between;padding:10px max(24px,calc(50% - 576px));background:var(--bg);border-bottom:1px solid var(--ln);margin-bottom:16px}
+h1{font-size:1.125rem;margin:0;font-weight:650;display:flex;align-items:center;gap:10px;min-width:0;white-space:nowrap}
 .logo{width:36px;height:36px;display:block;flex-shrink:0}
 h2{font-size:0.9375rem;margin:0 0 10px;font-weight:650}
 main{max-width:1200px;margin:0 auto;padding:0 24px 40px;display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
@@ -19,7 +19,7 @@ button{cursor:pointer}
 .tools button#th{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;padding:0}button:hover{border-color:var(--ac)}
 button.pri{background:var(--ac);color:var(--bg);border-color:var(--ac);font-weight:600}
 :focus-visible{outline:2px solid var(--ac);outline-offset:2px}
-.tools{display:flex;gap:8px;align-items:center}
+.tools{display:flex;gap:8px;align-items:center;flex-shrink:0}
 .btn{cursor:pointer;border:1px solid var(--ln);border-radius:6px;padding:6px 10px;background:var(--pn)}
 .st{color:var(--mu);font-size:0.8125rem}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--up);margin-right:6px}.dot.w{background:#d98a1c}
@@ -93,7 +93,11 @@ footer{max-width:1200px;margin:0 auto;padding:16px 24px 40px;display:grid;gap:10
 .two table{font-size:.8125rem}
 .two th,.two td{padding:7px 6px}
 @media (max-width:768px){
-header{padding:12px}
+header{padding:10px 12px;gap:8px}
+h1{font-size:1rem;gap:8px}
+.logo{width:28px;height:28px}
+.tools{gap:6px}
+.tools button:not(#th),.tools .btn{padding:5px 8px}
 main{padding:0 12px 32px;gap:12px}
 footer{padding:12px 12px 32px}
 .hero-flex{padding:16px}
