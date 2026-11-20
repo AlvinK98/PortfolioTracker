@@ -280,7 +280,7 @@ $("#th").onclick=()=>theme(document.documentElement.dataset.theme=="dark"?"light
 /* format */
 const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const fd=iso=>{const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(iso||"");return m?m[3]+" "+MON[+m[2]-1]+" "+m[1].slice(2):""};
-const nf=(v,d=2)=>isFinite(v)?v.toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d}):"–";
+const NFC={},nf=(v,d=2)=>isFinite(v)?(NFC[d]||(NFC[d]=new Intl.NumberFormat("en-US",{minimumFractionDigits:d,maximumFractionDigits:d}))).format(v):"–";
 const px=v=>v==null||!(v>0)?"–":nf(v,v<1?6:v<10?4:2);
 const sg=(v,d=2)=>(v>0.005?"+":v<-0.005?"−":"")+nf(Math.abs(v),d);
 const cl=v=>v>0.005?"up":v<-0.005?"dn":"";
@@ -289,12 +289,13 @@ const cl=v=>v>0.005?"up":v<-0.005?"dn":"";
 function getAumCcy(){return $("#aum-ccy")?$("#aum-ccy").value:"MYR"}
 function convertAum(valMYR){const c=getAumCcy();return c=="MYR"?valMYR:valMYR/(fx[c]||1)}
 
-function nyNow(){const p={};new Intl.DateTimeFormat("en-US",{timeZone:"America/New_York",weekday:"short",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(new Date()).forEach(x=>p[x.type]=x.value);return{wd:p.weekday,min:(+p.hour)*60+(+p.minute)}}
-function nyOff(){const d=new Date(),f=z=>new Date(d.toLocaleString("en-US",{timeZone:z}));return Math.round((f("America/New_York")-f("UTC"))/36e5)}
+const DTF={},dtf=z=>DTF[z]||(DTF[z]=new Intl.DateTimeFormat("en-US",{timeZone:z,weekday:"short",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}));
+const nyNow=()=>zNow("America/New_York"),nyOff=()=>zOff("America/New_York");
 const hm=n=>{n=((n%1440)+1440)%1440;return String(Math.floor(n/60)).padStart(2,"0")+String(n%60).padStart(2,"0")};
 const SES={HK:["Asia/Hong_Kong",[[570,720],[780,960]]],JP:["Asia/Tokyo",[[540,690],[750,930]]],UK:["Europe/London",[[480,990]]],KR:["Asia/Seoul",[[540,930]]],CN:["Asia/Shanghai",[[570,690],[780,900]]]};
-function zNow(z){const p={};new Intl.DateTimeFormat("en-US",{timeZone:z,weekday:"short",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(new Date()).forEach(x=>p[x.type]=x.value);return{wd:p.weekday,min:(+p.hour)*60+(+p.minute)}}
-function zOff(z){const d=new Date(),f=t=>new Date(d.toLocaleString("en-US",{timeZone:t}));return Math.round((f(z)-f("UTC"))/36e5)}
+function zNow(z){const p={};dtf(z).formatToParts(new Date()).forEach(x=>p[x.type]=x.value);return{wd:p.weekday,min:(+p.hour)*60+(+p.minute)}}
+const ZO={};
+function zOff(z){const c=ZO[z],t=Date.now();if(c&&t-c[0]<18e5)return c[1];const d=new Date(),f=x=>new Date(d.toLocaleString("en-US",{timeZone:x})),v=Math.round((f(z)-f("UTC"))/36e5);ZO[z]=[t,v];return v}
 function mktHrs(m){
   if(SES[m]){const[z,w]=SES[m],d=(8-zOff(z))*60;return "Mon-Fri "+hm(w[0][0]+d)+"hrs - "+hm(w[w.length-1][1]+d)+"hrs"}
   if(m=="CRYPTO")return "Mon-Sun 0000hrs-2400hrs";
@@ -302,7 +303,9 @@ function mktHrs(m){
   if(m=="US"){const d=(8-nyOff())*60;return "Mon-Fri "+hm(570+d)+"hrs - "+hm(960+d)+"hrs"}
   return "Mon-Fri 0900hrs - 1700hrs"}
 const mkl=k=>`<span class="mh${isTrading(k)?" mo":""}" title="Malaysia time (MYT)">(${mktHrs(k)})</span>`;
-function isTrading(m){
+const TRC={};
+function isTrading(m){const n=Date.now(),c=TRC[m];if(c&&n-c[0]<5000)return c[1];const v=isTrading0(m);TRC[m]=[n,v];return v}
+function isTrading0(m){
   if(SES[m]){const[z,w]=SES[m],n=zNow(z);return n.wd!="Sat"&&n.wd!="Sun"&&w.some(r=>n.min>=r[0]&&n.min<r[1])}
   if(m=="CRYPTO") return true;
   if(m=="US"){const n=nyNow();return n.wd!="Sat"&&n.wd!="Sun"&&n.min>=570&&n.min<960}
@@ -412,7 +415,7 @@ async function tick(){if(document.hidden)return;
   const grp=async c=>{
     const k=c?"c":"s";if(bz[k])return;bz[k]=1;let did=0;
     try{const L=mk(c);did=L.length;
-      if(c)await Promise.allSettled(L.map(run));else for(const h of L){await run(h);await sleep(300)}}
+      if(c)await Promise.allSettled(L.map(run));else{const q=L.slice();await Promise.all([0,1,2].map(async()=>{let h;while((h=q.shift())){await run(h);await sleep(300)}}))}}
     finally{bz[k]=0;if(did){last=new Date();save();render()}}};
   grp(true);grp(false)}
 async function getfx(){if(document.hidden)return;
@@ -420,10 +423,11 @@ async function getfx(){if(document.hidden)return;
     if(!man.USD)fx.USD=r.MYR;if(!man.USDT)fx.USDT=r.MYR;if(!man.SGD)fx.SGD=r.MYR/r.SGD;if(!man.TWD)fx.TWD=r.MYR/r.TWD;["CNY","JPY","GBP","KRW","HKD"].forEach(c=>{if(!man[c]&&r[c]>0)fx[c]=r.MYR/r[c]});net.FX=1;save();render()}catch(e){net.FX=0}}
 
 /* connection check */
+const MYTF=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kuala_Lumpur',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true});
 function getMYT(d){
   if(!d) return "Connecting…";
   const p={};
-  new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kuala_Lumpur',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}).formatToParts(d).forEach(x=>p[x.type]=x.value);
+  MYTF.formatToParts(d).forEach(x=>p[x.type]=x.value);
   return p.day+" "+MON[+p.month-1]+" "+p.year.slice(2)+" "+p.hour+":"+p.minute+":"+p.second+" "+String(p.dayPeriod||"").toLowerCase();
 }
 const net = { FX: null, Binance: null, "Yahoo Finance": null };
@@ -889,7 +893,8 @@ const RGC={"4h":["m1",4*36e5],"1d":["m5",24*36e5],"5d":["m10",120*36e5],"1m":["m
 let HI=-1,HD=null,RG=sto.get("pt_hr");
 if(!["4h","1d","5d","1m","3m","6m","ytd","1y","5y"].includes(RG))RG="1m";
 const rgs=()=>{$("#hr").value=RG};
-const fl=(t,it,full)=>{const p={};new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Kuala_Lumpur",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(t).forEach(x=>p[x.type]=x.value);const d=p.day+" "+MON[+p.month-1]+" "+p.year.slice(2);return it?d+" "+p.hour+":"+p.minute:d};
+const FLF=new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Kuala_Lumpur",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"});
+const fl=(t,it,full)=>{const p={};FLF.formatToParts(t).forEach(x=>p[x.type]=x.value);const d=p.day+" "+MON[+p.month-1]+" "+p.year.slice(2);return it?d+" "+p.hour+":"+p.minute:d};
 function hist(){
   const now=Date.now(),it=!!RGC[RG],el=$("#hc");let P;
   if(it){const rc=RGC[RG],c=now-rc[1];P=(rc[0]=="m5"?INTRA:SER[rc[0]]).filter(e=>e[0]>=c);if(rc[1]>=432e6){const f0=P.length?P[0][0]:Infinity;P=HIST.map(e=>[Date.parse(e[0]+"T12:00:00+08:00"),e[1],e[2]]).filter(e=>e[0]>=c&&e[0]<f0).concat(P)}}
@@ -1001,7 +1006,7 @@ $("#im").onchange=e=>{
   const r=new FileReader();
   r.onload=()=>{
     try{
-      const d=JSON.parse(r.result);UA.length=0;updU();H.forEach(h=>{if(!h.athd&&h.m!="MYF")h.ht=0});
+      const d=JSON.parse(r.result);UA.length=0;updU();
       if(Array.isArray(d)) {
         H = d;
       } else if(d && typeof d === 'object' && Array.isArray(d.holdings)) {
@@ -1017,9 +1022,11 @@ $("#im").onchange=e=>{
       } else {
         throw 0;
       }
+      H=H.filter(h=>h&&MK[h.m]&&typeof h.t=="string"&&isFinite(h.q)&&isFinite(h.w));
+      H.forEach(h=>{h.c=MK[h.m].c;if(!h.athd&&h.m!="MYF")h.ht=0});
       save();
       render();
-      tick();
+      tick();loadHi();loadDay();
     }catch(x){
       $("#msg").textContent="That file is not a valid portfolio backup.";
     }
