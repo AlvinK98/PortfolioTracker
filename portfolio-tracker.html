@@ -231,6 +231,7 @@ header{flex-wrap:nowrap}
   <section class="box" id="sec-o">
     <div class="hd"><h2>Holdings</h2>
       <div>Market <span class="ms" id="mfw"><button type="button"></button><div class="mp" hidden></div></span>
+      Performance <span class="ms" id="cvw"><button type="button"></button><div class="mp" hidden></div></span>
       Group by <select id="gb"><option value="m">Market</option><option value="c">Currency</option><option value="">None</option></select></div>
     </div>
     <div class="sc"><table id="tb"></table></div>
@@ -791,7 +792,7 @@ document.addEventListener("click",e=>{
 });
 
 function rows(){
-  const gb=$("#gb").value,sa=CV.has("ath"),sm=CV.has("mom"),sy=CV.has("ytd");
+  const gb=$("#gb").value,sa=CV.has("ath"),sm=CV.has("mom"),sy=sm,sp=CV.has("pl");
   const L=H.map((h,i)=>({h,i,x:calc(h)})).filter(o=>!MFS.size||MFS.has(o.h.m))
     .sort((a,b)=>{
       let va, vb;
@@ -815,7 +816,7 @@ function rows(){
     });
   const gk=o=>gb?o.h[gb]:"",ord=gb=="m"?MKS:CUR;
   const keys=[...new Set(L.map(gk))].sort((a,b)=>ord.indexOf(a)-ord.indexOf(b));
-  const tbCols=[["Ticker","t"],["Units","q"],["WAC","w"],["Price","p"],["Day %","dc"],...(sa?[["ATH (5Y)","ath"],["vs ATH","vsAth"]]:[]),...(sm?[["MoM %","mom"],["QoQ %","qoq"],["YoY %","yoy"]]:[]),...(sy?[["YTD %","ytd"]]:[]),["P/L","pl"],["P/L %","pc"],["P/L ({"+getAumCcy()+"})","plm"],["Value ({"+getAumCcy()+"})","v"],["",""]];
+  const tbCols=[["Ticker","t"],["Units","q"],["WAC","w"],["Price","p"],["Day %","dc"],...(sa?[["ATH (5Y)","ath"],["vs ATH","vsAth"]]:[]),...(sm?[["MoM %","mom"],["QoQ %","qoq"],["YoY %","yoy"]]:[]),...(sy?[["YTD %","ytd"]]:[]),...(sp?[["P/L","pl"],["P/L %","pc"],["P/L ({"+getAumCcy()+"})","plm"]]:[]),["Value ({"+getAumCcy()+"})","v"],["",""]];
   let s="<tr>"+tbCols.map(([lbl,key])=>{
     if(!key)return"<th></th>";
     const isS=tbSort.col===key,arr=isS?(tbSort.dir=="asc"?" ▲":" ▼"):"";
@@ -824,11 +825,11 @@ function rows(){
   keys.forEach(k=>{const G=L.filter(o=>gk(o)==k);
     if(gb){const vm=G.reduce((a,o)=>a+o.x.vm,0),cm=G.reduce((a,o)=>a+o.x.cm,0);const gq=G.filter(o=>o.h.pv>0&&o.h.p>0),gq0=gq.reduce((a,o)=>a+o.h.q*o.h.pv*(fx[o.h.c]||1),0),gd=gq0?gq.reduce((a,o)=>a+o.h.q*(o.h.p-o.h.pv)*(fx[o.h.c]||1),0)/gq0*100:null;
       const gy0=G.filter(o=>ytdp(o.h)!=null),gyb=gy0.reduce((a,o)=>a+o.h.q*o.h.y0*(fx[o.h.c]||1),0),gyc=gy0.reduce((a,o)=>a+o.h.q*o.h.p*(fx[o.h.c]||1),0),gy=gyb?(gyc/gyb-1)*100:null;
-      s+=`<tr class="g"><td colspan="4"><span class="gl">${gb=="m"?flag(k)+MK[k].n+mkl(k):k}</span></td><td class="${cl(gd)}">${gd==null?"–":sg(gd)+"%"}</td>${sa?'<td colspan="2"></td>':""}${sm?PG(G):""}${sy?`<td class="${cl(gy)}">${gy==null?"–":sg(gy)+"%"}</td>`:""}<td></td><td class="${cl(vm-cm)}">${sg(cm?(vm-cm)/cm*100:0)}%</td><td class="${cl(vm-cm)}">${sg(convertAum(vm-cm))}</td><td>${nf(convertAum(vm))}</td><td></td></tr>`}
+      s+=`<tr class="g"><td colspan="4"><span class="gl">${gb=="m"?flag(k)+MK[k].n+mkl(k):k}</span></td><td class="${cl(gd)}">${gd==null?"–":sg(gd)+"%"}</td>${sa?'<td colspan="2"></td>':""}${sm?PG(G):""}${sy?`<td class="${cl(gy)}">${gy==null?"–":sg(gy)+"%"}</td>`:""}${sp?`<td></td><td class="${cl(vm-cm)}">${sg(cm?(vm-cm)/cm*100:0)}%</td><td class="${cl(vm-cm)}">${sg(convertAum(vm-cm))}</td>`:""}<td>${nf(convertAum(vm))}</td><td></td></tr>`}
     G.forEach(({h,i,x})=>{
       s+=`<tr><td><b>${tka(h)}</b>${h.n?" - "+esc(h.n.slice(0,28)):""}<span class="chip">${esc(h.c||(MK[h.m]?MK[h.m].c:""))}</span>${h.err&&auto(h)?'<span class="stale">stale</span>':""}</td>
       <td>${nf(+h.q,h.m=="TW"?0:4)}</td><td>${px(h.w)}</td><td style="${isTrading(h.m) ? "color:#eab308;font-weight:600;" : ""}">${x.hv?px(h.p):"–"}</td><td class="${cl(dayp(h))}">${dayp(h)==null?"–":sg(dayp(h))+"%"}</td>${sa?`<td class="athc" data-i="${i}">${px(h.ath)}</td><td class="${cl(h.ath&&x.hv?h.p-h.ath:0)}">${h.ath>0&&x.hv?sg((h.p/h.ath-1)*100)+"%":"–"}</td>`:""}${sm?PR(h):""}${sy?`<td class="${cl(ytdp(h))}">${ytdp(h)==null?"–":sg(ytdp(h))+"%"}</td>`:""}
-      <td class="${cl(x.pl)}">${x.hv?sg(x.pl):"–"}</td><td class="${cl(x.pl)}">${x.hv?sg(x.pc)+"%":"–"}</td><td class="${cl(x.vm-x.cm)}">${x.hv?sg(convertAum(x.vm-x.cm)):"–"}</td><td>${nf(convertAum(x.vm))}</td>
+      ${sp?`<td class="${cl(x.pl)}">${x.hv?sg(x.pl):"–"}</td><td class="${cl(x.pl)}">${x.hv?sg(x.pc)+"%":"–"}</td><td class="${cl(x.vm-x.cm)}">${x.hv?sg(convertAum(x.vm-x.cm)):"–"}</td>`:""}<td>${nf(convertAum(x.vm))}</td>
       <td><button data-e="${i}" title="Edit" style="padding:4px 7px;line-height:1;display:inline-flex;align-items:center;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button><button data-d="${i}" title="Delete" style="padding:4px 7px;line-height:1;display:inline-flex;align-items:center;justify-content:center;color:var(--dn);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button></td></tr>`})});
   $("#tb").innerHTML=L.length?s:(H.length?"<tr><td>No holdings in the selected markets.</td></tr>":"<tr><td>No holdings yet. Add one above.</td></tr>")}
 $("#gb").onchange=rows;
@@ -1095,7 +1096,8 @@ $("#txb").onclick=()=>{sto.set("pt_txv",sto.get("pt_txv")==="0"?"1":"0");txr()};
 $("#txpg").onclick=e=>{const b=e.target.closest("button");if(!b||b.disabled)return;TXP+=+b.dataset.tp;txr()};
 /* Holdings filters */
 const MFS=new Set();
-const CV=new Set(["ath","mom","ytd"]);
+let CV=new Set(["ath","mom","pl"]);
+try{const v=JSON.parse(sto.get("pt_hc2")||"null");if(Array.isArray(v))CV=new Set(v.filter(k=>k=="ath"||k=="mom"||k=="pl"))}catch(e){}
 const closeMs=()=>document.querySelectorAll(".mp").forEach(x=>x.hidden=true);
 function msMake(w,items,S,o){
   const b=w.querySelector("button"),p=w.querySelector(".mp");
@@ -1107,6 +1109,7 @@ function msMake(w,items,S,o){
   p.onchange=e=>{const k=e.target.dataset.k;if(k=="*")S.clear();else if(e.target.checked)S.add(k);else S.delete(k);draw();o.on()};
   draw()}
 msMake($("#mfw"),MKS.map(k=>[k,MK[k].n]),MFS,{all:"All markets",text:S=>!S.size||S.size>=MKS.length?"All markets":S.size<=2?MKS.filter(k=>S.has(k)).map(k=>MK[k].n).join(", "):S.size+" markets",on:rows});
+msMake($("#cvw"),[["ath","ATH & vs ATH"],["mom","MoM, QoQ, YoY, YTD"],["pl","P/L"]],CV,{text:S=>S.size>=3?"All":S.size?S.size+" of 3":"None",on:()=>{sto.set("pt_hc2",JSON.stringify([...CV]));rows()}});
 document.addEventListener("click",closeMs);
 document.addEventListener("keydown",e=>{if(e.key=="Escape")closeMs()});
 txr();renderNow();getfx();tick();loadHi();loadDay();
