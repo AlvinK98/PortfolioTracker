@@ -45,6 +45,7 @@ button.pri{background:var(--ac);color:var(--bg);border-color:var(--ac);font-weig
 #fx input{width:120px}
 #fx button{justify-self:start}
 #fx>span{grid-column:1/-1}
+#cv{display:flex;flex-wrap:wrap;align-items:center;gap:10px}#cv input{width:130px}#cv select{padding:4px 8px}#cv #cvs{font-size:1rem;line-height:1;padding:5px 10px}
 .two{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(540px,100%),1fr));gap:16px}
 .box{background:var(--pn);border:1px solid var(--ln);border-radius:10px;padding:16px}
 .hd{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;margin-bottom:10px}
@@ -250,6 +251,7 @@ header{flex-wrap:nowrap}
 <footer>
   <div class="st" id="st"></div>
   <section class="fx" id="fx"></section>
+  <section class="fx" id="cv" aria-label="Currency converter"><b>Converter</b><input id="cva" type="number" step="any" min="0" aria-label="Amount"><select id="cvf" aria-label="From currency"></select><button id="cvs" type="button" title="Swap currencies" aria-label="Swap currencies">&#8644;</button><input id="cvb" type="number" step="any" min="0" aria-label="Converted amount"><select id="cvt" aria-label="To currency"></select><span id="cvr"></span></section>
   <section class="fx"><label>Stock refresh <select id="rf"><option value="5000">5 sec</option><option value="10000">10 sec</option><option value="15000">15 sec</option><option value="30000">30 sec</option><option value="60000">60 sec</option></select></label><button id="pxs">Test connection</button><span id="pxm"></span></section>
 
 
@@ -881,9 +883,25 @@ const FXU={JPY:100,KRW:1000},FXL=["CNY","GBP","HKD","JPY","KRW","SGD","TWD","USD
 let FXC=sto.get("pt_fxc");if(!FXL.includes(FXC))FXC="USD";
 $("#fx").innerHTML='<select id="fxs" aria-label="Currency">'+FXL.map(c=>`<option${c==FXC?" selected":""}>${c}</option>`).join("")+'</select>'+FXL.map(c=>`<label data-lc="${c}"${c==FXC?"":" hidden"}>${FXU[c]||1} ${c} = <input type="number" step="any" data-c="${c}"> MYR</label>`).join("")+'<button id="au">Auto rates</button><span>USDT follows USD unless you edit it.</span>';
 $("#fx").onchange=e=>{if(e.target.id!="fxs")return;FXC=e.target.value;sto.set("pt_fxc",FXC);document.querySelectorAll("#fx label[data-lc]").forEach(l=>l.hidden=l.dataset.lc!=FXC)};
-function fxs(){document.querySelectorAll("#fx input").forEach(i=>{if(document.activeElement!==i)i.value=(+fx[i.dataset.c]*(FXU[i.dataset.c]||1)).toFixed(4)})}
+function fxs(){document.querySelectorAll("#fx input").forEach(i=>{if(document.activeElement!==i)i.value=(+fx[i.dataset.c]*(FXU[i.dataset.c]||1)).toFixed(4)});cvu()}
 $("#fx").oninput=e=>{const c=e.target.dataset.c;if(c&&+e.target.value>0){fx[c]=+e.target.value/(FXU[c]||1);man[c]=1;save();render()}};
 $("#au").onclick=()=>{man={};save();getfx()};
+/* currency converter (type an amount in either box, any pair, with swap) */
+const CVL=["MYR",...FXL],cvc=(v,f,t)=>v*(fx[f]||1)/(fx[t]||1),cvn=v=>!isFinite(v)?"":String(+v.toFixed(Math.abs(v)>=100?2:Math.abs(v)>=1?4:6));
+let CVF=sto.get("pt_cvf"),CVT=sto.get("pt_cvt");if(!CVL.includes(CVF))CVF="KRW";if(!CVL.includes(CVT))CVT="MYR";
+$("#cvf").innerHTML=$("#cvt").innerHTML=CVL.map(c=>`<option>${c}</option>`).join("");
+$("#cvf").value=CVF;$("#cvt").value=CVT;$("#cva").value=sto.get("pt_cva")||"1000";
+function cvu(){
+  const f=$("#cvf").value,t=$("#cvt").value,a=$("#cva"),b=$("#cvb");
+  if(document.activeElement!==b){const v=+a.value;b.value=a.value!==""&&v>=0?cvn(cvc(v,f,t)):""}
+  const r=cvc(1,f,t);$("#cvr").textContent="1 "+f+" = "+(r>=100?nf(r,2):nf(r,r>=1?4:6))+" "+t;
+  sto.set("pt_cvf",f);sto.set("pt_cvt",t);sto.set("pt_cva",a.value)}
+$("#cva").oninput=()=>{$("#cvb").blur&&0;cvu()};
+$("#cvb").oninput=()=>{const f=$("#cvf").value,t=$("#cvt").value,v=+$("#cvb").value;$("#cva").value=$("#cvb").value!==""&&v>=0?cvn(cvc(v,t,f)):"";cvu()};
+$("#cvf").onchange=$("#cvt").onchange=()=>{$("#cvb").blur();cvu()};
+$("#cvs").onclick=()=>{const f=$("#cvf"),t=$("#cvt"),a=$("#cva"),b=$("#cvb"),x=f.value,y=a.value;f.value=t.value;t.value=x;a.value=b.value;b.value=y;cvu()};
+cvu();
+
 
 /* day change, history, targets, trades */
 const dayp=h=>h.pv>0&&h.p>0?(h.p/h.pv-1)*100:null;
