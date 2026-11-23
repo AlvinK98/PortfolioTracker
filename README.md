@@ -1,87 +1,127 @@
-# 📈 Multi-Asset Portfolio Tracker
+# Portfolio Tracker
 
-A feature-rich, single-file web app for tracking investments across ten markets and crypto, with live prices, automatic 5-year highs, multi-currency totals, trade logging and a portfolio value history. No build step, no server, no account.
+A single-file, browser-based investment portfolio tracker for monitoring stocks, ETFs, cryptocurrency and selected Malaysia mutual funds across international markets. It brings portfolio valuation, performance indicators, trade records, allocation analysis and multi-currency reporting into one browser page.
 
-[![HTML5](https://img.shields.io/badge/HTML5-Single_File-orange?style=flat-square)](#)
-[![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-yellow?style=flat-square)](#)
-[![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
+Built with HTML, CSS and vanilla JavaScript. No build process, package installation, user account or application server is required.
 
----
-
-## 🌟 Key Features
-
-- **🌏 10 markets + crypto:** United States, Taiwan, Singapore, Malaysia, China, Japan, United Kingdom, South Korea, Hong Kong, and crypto via Binance (USDT pairs).
-- **🔍 Ticker search:** Type a ticker or company name and pick from a "Ticker - Company" list (built-in popular tickers plus live Yahoo Finance and Binance search). You only enter units and your cost; price, ATH and P/L are filled in automatically.
-- **⚡ Live prices:** Stock quotes refresh every 5 to 60 seconds (your choice), crypto via Binance. Prices turn yellow while that market is open.
-- **🏔️ 5-year ATH:** The 5-year high and its date are built from daily highs and rechecked every 6 hours. Hover an ATH value to see its date.
-- **📊 Performance columns:** Day %, vs ATH, MoM, QoQ, YoY and YTD, each switchable from the Holdings "Performance" filter.
-- **💱 Multi-currency totals:** View Total AUM and P/L in CNY, GBP, HKD, JPY, KRW, MYR, SGD, TWD or USD. FX rates auto-update (open.er-api.com) and can be overridden per currency.
-- **🎨 Interactive doughnut chart:** Allocation by market with pattern fills, hover tooltips and a legend.
-- **📈 Portfolio value over time:** Cost (yellow), profit (green) and loss (red) on one chart, with ranges 4H, 1D, 5D, 1M, 3M, 6M, YTD, 1Y and 5Y and a hover readout.
-- **⚖️ Target allocation:** Set a target % per market and see drift (highlighted at 5 points or more) and the amount to buy or sell to rebalance.
-- **🔄 Trades in one form:** Buy (auto-blended WAC), sell (realized P/L), stock split / reverse split, and edit holding.
-- **🧾 Transaction history:** Paged list (10 per page) of every buy, sell and split, with show/hide.
-- **↩️ Undo:** 20-step undo for holding and trade changes.
-- **🇲🇾 Malaysia mutual funds:** Enter the price manually, or paste a Principal fund NAV CSV link to pull NAV, ATH and performance automatically. For manual funds, the highest NAV you enter is used as the ATH.
-- **🗂️ Holdings table:** Sortable columns, frozen ticker column, group by market or currency, multi-select market filter, and market hours (in Malaysia time) beside each market name.
-- **🌗 Light / dark mode** and a sticky header, with a back-to-top button.
-- **🔒 Private by design:** Everything is stored in your browser's `localStorage`. Nothing is sent to a server. Back up and restore with timestamped JSON export and import (holdings, FX, history, targets, realized P/L and transactions).
+![HTML5](https://img.shields.io/badge/HTML5-Single--file-orange?style=flat-square)
+![JavaScript](https://img.shields.io/badge/JavaScript-Vanilla-yellow?style=flat-square)
+![Storage](https://img.shields.io/badge/Storage-Browser%20localStorage-blue?style=flat-square)
 
 ---
 
-## 🌍 Markets and Data Sources
+## Features
 
-| Market | Tag | Currency | Ticker format | Price source |
-| --- | --- | --- | --- | --- |
-| United States | `US` | USD | `AAPL` | Yahoo Finance |
-| Taiwan | `TW` | TWD | `2330.TW`, `.TWO` | Yahoo Finance |
-| Singapore | `SG` | SGD | `D05.SI` | Yahoo Finance |
-| Malaysia | `MYF` | MYR | `1155.KL`, or a fund name | Yahoo Finance, Principal NAV CSV, or manual |
-| China | `CN` | CNY | `600519.SS`, `300750.SZ` | Yahoo Finance |
-| Japan | `JP` | JPY | `7203.T` | Yahoo Finance |
-| United Kingdom | `UK` | GBP | `SHEL.L` | Yahoo Finance (pence converted to pounds) |
-| South Korea | `KR` | KRW | `005930.KS`, `.KQ` | Yahoo Finance |
-| Hong Kong | `HK` | HKD | `0700.HK` | Yahoo Finance |
-| Crypto | `CRYPTO` | USDT | `BTC` | Binance (USDT pairs) |
+### Portfolio overview
 
-Notes:
-- Cost is converted at the current FX rate, so currency gains and losses are not tracked separately.
-- Data comes from free public sources and may be delayed or inaccurate. Verify with your broker before making decisions.
+- **Total portfolio value (AUM):** View current value, cost basis, total profit/loss, daily movement and realized profit/loss.
+- **Multi-currency display:** Display consolidated AUM and profit/loss in CNY, GBP, HKD, JPY, KRW, MYR, SGD, TWD or USD.
+- **Market and currency summaries:** Compare holdings, portfolio value, allocation and profit/loss by market or quote currency.
+- **Interactive allocation chart:** Explore portfolio allocation by market with hover details and a legend.
+- **Light and dark themes:** Switch the interface appearance.
 
----
+### Holdings and performance
 
-## 🚀 Getting Started
+- **Ticker search:** Search for listed instruments with Yahoo Finance suggestions, or choose a market and enter a supported ticker. Binance provides cryptocurrency pair suggestions.
+- **Automatic quotes:** Listed-stock prices are retrieved from Yahoo Finance; cryptocurrency prices are retrieved from Binance spot markets using USDT pairs.
+- **Adjustable refresh:** Choose a stock refresh interval of 5, 10, 15, 30 or 60 seconds. Stock refreshes are throttled outside the relevant market session.
+- **Performance indicators:** View daily movement, five-year all-time high (ATH), distance from ATH, month-over-month (MoM), quarter-over-quarter (QoQ), year-over-year (YoY) and year-to-date (YTD) performance where data is available.
+- **Market hours:** When holdings are grouped by market, display session hours in Malaysia Time (MYT) and highlight markets that are currently open.
+- **Filters and sorting:** Filter holdings by market, show or hide performance columns, group by market or currency, and sort the holdings and summary tables.
 
-1. **Download** `portfolio-tracker.html`, or open the hosted version if you use GitHub Pages.
-2. Open the file in any modern browser (Chrome, Safari, Firefox, Edge).
-3. Add your holdings, set your market targets, or import an existing `portfolio-backup-*.json` file.
+Historical metrics depend on provider coverage. Manually priced mutual funds do not have the same automatic market history as quoted instruments.
 
-### Price proxy (important if you fork this)
+### Trade management
 
-Browsers block direct requests to Yahoo Finance, so stock quotes go through a small relay. The tracker tries a Cloudflare Worker first, then falls back to public CORS proxies, which are less reliable. If you fork the project, deploy your own Cloudflare Worker that forwards a `url` query parameter and replace the `PX` constant near the top of the price section in the script with your Worker's address. Use **Test connection** in the footer to check each source.
+The holding form supports:
 
----
+- **Buy / add:** Add a holding or add units to an existing position. Additional purchases update the weighted average cost (WAC).
+- **Sell:** Record a sale, calculate realized profit/loss and reduce the remaining units. A fully sold position is removed from the holdings table.
+- **Stock split / reverse split:** Adjust unit quantity and WAC using a split ratio.
+- **Edit and delete:** Correct an existing holding or remove it from the portfolio.
+- **Undo:** Undo up to 20 supported recent add, edit and trade actions.
+- **Transaction history:** Review recorded buys, sells and splits in a paginated list. The history can be shown or hidden.
 
-## 🛠️ Technical Architecture
+### Target allocation and portfolio history
 
-- **Frontend:** Vanilla JavaScript (ES6+), HTML5 and CSS3, with CSS custom properties for light/dark theming. Charts are hand-built SVG, so there are no libraries.
-- **Pricing:** Yahoo Finance (through the relay chain above) for stocks and ETFs, the Binance public API for crypto, open.er-api.com for FX, and optional Principal NAV CSV files for Malaysian funds.
-- **Storage:** Browser `localStorage`, with history kept in tiered intervals (1 minute up to 2 hours, then daily).
+- **Target allocation:** Set target percentages for each market. The tracker compares actual weights with the targets and estimates the value to buy or sell to rebalance based on current portfolio value.
+- **Portfolio value chart:** Compare portfolio value with cost basis across 4H, 1D, 5D, 1M, 3M, 6M, YTD, 1Y and 5Y ranges.
+- **Locally collected history:** Intraday snapshots and daily portfolio snapshots are saved while the tracker is in use. The chart does not reconstruct portfolio history from before tracking began.
 
----
+### Backup and portability
 
-## 🔐 Privacy
-
-No accounts, no analytics, no advertising trackers. Your units, costs and balances never leave your device. To show prices, the page requests ticker symbols and exchange rates from the services above, which may see your IP address under their own policies. Clearing your browser's site data removes everything, so use **Export** to keep a copy.
-
-This tracker is for tracking only. It does not give trading or investment advice and has no access to any brokerage account.
+- **Export:** Download a timestamped JSON backup containing holdings, FX settings, display currency, history, target allocations, realized profit/loss and transaction records.
+- **Import:** Restore a JSON backup. Legacy JSON arrays containing holdings only are also accepted.
+- **Browser storage:** Holdings, transactions, targets, settings and chart history are persisted in the browser's local storage.
 
 ---
 
-## 🤝 Contributing
+## Supported markets and data sources
 
-Contributions, bug reports and feature requests are welcome. Feel free to open an issue or submit a pull request.
+| Market | Tag | Currency | Ticker convention / source |
+| :--- | :--- | :--- | :--- |
+| United States | US | USD | Yahoo Finance |
+| Taiwan | TW | TWD | Yahoo Finance; .TW / .TWO |
+| Singapore | SG | SGD | Yahoo Finance; .SI |
+| Malaysia stocks and ETFs | MYF | MYR | Yahoo Finance; .KL |
+| Malaysia mutual funds | MYF | MYR | Manual price entry, or supported Principal Malaysia NAV CSV |
+| China | CN | CNY | Yahoo Finance; .SS / .SZ |
+| Japan | JP | JPY | Yahoo Finance; .T |
+| United Kingdom | UK | GBP | Yahoo Finance; .L |
+| South Korea | KR | KRW | Yahoo Finance; .KS / .KQ |
+| Hong Kong | HK | HKD | Yahoo Finance; .HK |
+| Cryptocurrency | CRYPTO | USDT | Binance spot API; USDT trading pairs |
 
-## 📄 License
+For a Principal Malaysia mutual fund, the optional NAV URL must be a Principal Malaysia download CSV link in the supported /en/nav/…_format=csv format. Other mutual funds can be tracked by entering prices manually.
 
-This project is licensed under the [MIT License](LICENSE).
+### Currency conversion
+
+- Automatic exchange rates are retrieved from [open.er-api.com](https://open.er-api.com/).
+- Exchange rates can be overridden manually in the footer or restored with **Auto rates**.
+- USDT follows USD by default, with an option to override its rate separately.
+- Portfolio values are converted for consolidated reporting. Currency-related gains and losses are not separately attributed.
+
+---
+
+## Getting started
+
+1. Download or clone this repository.
+2. Open [portfolio-tracker.html](portfolio-tracker.html) in a modern browser.
+3. Enable JavaScript and internet access for live quotes, exchange rates and remote NAV data.
+4. Search for or enter an instrument, select its market, and record the units and purchase price.
+5. Use **Export** regularly to keep a backup of your portfolio data.
+
+No build step, package manager, database or local server is needed.
+
+---
+
+## Refresh and data behaviour
+
+- Stock quote refresh intervals are configurable from 5 to 60 seconds. Outside a market's trading session, stock refreshes are throttled.
+- Cryptocurrency prices are retrieved from Binance while the page is active.
+- Five-year highs and related historical reference prices are refreshed periodically from Yahoo Finance or Binance.
+- Principal NAV data is retrieved from the CSV URL supplied for the fund.
+- **Test connection** checks the FX, Binance and Yahoo Finance sources.
+- Provider or relay failures can leave quotes stale or unavailable. Prices and historical figures may be delayed, incomplete or inaccurate; verify important values with your broker or fund provider.
+
+The tracker needs internet access for live market data, FX rates and remote NAV data. Previously saved portfolio data remains in the browser unless its site data is cleared.
+
+---
+
+## Privacy and local data
+
+The tracker has no user accounts, analytics tracker or advertising tracker. Portfolio holdings, units, costs, transactions, target allocations and settings are saved in browser local storage; these portfolio details are not sent to the developer.
+
+The page does make external requests to retrieve market information. Yahoo Finance and Binance receive requested ticker symbols; open.er-api.com provides exchange rates. Yahoo Finance requests may pass through a configured price relay or public CORS proxy. These services may receive your IP address, browser information and the ticker symbols requested, under their own privacy policies. The tracker does not include your holding quantities, cost basis or portfolio balances in these market-data requests.
+
+Clearing browser site data permanently removes locally stored tracker information. Use **Export** to keep your own backup.
+
+---
+
+## Important information
+
+This application is a portfolio tracking tool only. It does not provide investment or trading advice, connect to brokerage accounts, place orders or execute trades. Market prices and calculated figures may be delayed or inaccurate. Verify important information with your broker or fund provider before making investment decisions.
+
+## Copyright
+
+© 2026 Alvin Koh. All rights reserved. The text, design and code of this tracker may not be copied or redistributed without permission. All third-party trademarks and product names belong to their respective owners.
