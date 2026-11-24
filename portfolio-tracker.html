@@ -1167,4 +1167,17 @@ setInterval(livePx,20000);
   document.documentElement.addEventListener("mouseleave",()=>{act=false;clr();if(!q)q=requestAnimationFrame(run)});
 })();
 /* back to top */
-(function(){const b=$("#top"),u=()=>b.classList.toggle("on",scrollY>400);addEventListener("scroll",u,{pass
+(function(){const b=$("#top"),u=()=>b.classList.toggle("on",scrollY>400);addEventListener("scroll",u,{passive:true});u();b.onclick=()=>scrollTo({top:0,behavior:"smooth"})})();
+/* legal modal */
+(function(){
+  const m=$("#lgm"),T={privacy:"Privacy Policy",copyright:"Copyright & Credits"};
+  function open(k){$("#lgt").textContent=T[k];["privacy","copyright"].forEach(x=>$("#lg-"+x).hidden=x!==k);m.hidden=false;$("#lgm .pb").scrollTop=0;$("#lgx").focus()}
+  function close(){m.hidden=true}
+  document.querySelectorAll("[data-lg]").forEach(b=>b.onclick=()=>open(b.dataset.lg));
+  $("#lgx").onclick=close;
+  m.addEventListener("click",e=>{if(e.target===m)close()});
+  document.addEventListener("keydown",e=>{if(e.key=="Escape"&&!m.hidden)close()});
+})();
+</script>
+</body>
+</html>
