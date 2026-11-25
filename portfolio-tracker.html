@@ -1214,4 +1214,147 @@ $("#rf").value=String(RF);
 $("#rf").onchange=()=>{RF=+$("#rf").value;sto.set("pt_rf",RF)};
 $("#pxs").onclick=()=>{yBad.fill(0);yF.fill(0);diag()};
 const ihd=Object.getOwnPropertyDescriptor(Element.prototype,"innerHTML");
-["#tm","#tc","#tb","#tt","#hc","#tpl","#st","#donut-svg","#donut-legend"].forEach(q=>Object.def
+["#tm","#tc","#tb","#tt","#hc","#tpl","#st","#donut-svg","#donut-legend"].forEach(q=>Object.defineProperty($(q),"innerHTML",{get(){return ihd.get.call(this)},set(v){if(this._h!==v){this._h=v;ihd.set.call(this,v)}}}));
+document.addEventListener("visibilitychange",()=>{if(!document.hidden){tick();getfx();loadDay();loadHi()}});
+const rec=(a,m,t,q,p,c,rl)=>{const x={ts:Date.now(),a,m,t,q,p,c};if(a=="s")x.rl=rl;TX.push(x);if(TX.length>5000)TX.shift();sto.set("pt_tx",JSON.stringify(TX));const u=UA[UA.length-1];if(u)u.tx=x;TXP=0;txr()};
+function txr(){
+  const w=$("#txw"),b=$("#txb"),on=sto.get("pt_txv")!=="0";
+  w.hidden=!on;b.textContent=on?"Hide transactions":"Show transactions ("+TX.length+")";b.setAttribute("aria-expanded",on);
+  if(!on)return;
+  const N=TX.length,pg=Math.max(1,Math.ceil(N/10));TXP=Math.min(Math.max(TXP,0),pg-1);
+  const L=TX.slice().reverse().slice(TXP*10,TXP*10+10);
+  $("#txt").innerHTML=N?"<thead><tr><th>Date (MYT)</th><th>Action</th><th>Ticker</th><th>Units</th><th>Price</th><th>Amount</th><th>Realized P/L (MYR)</th></tr></thead><tbody>"+L.map(x=>`<tr><td>${fl(x.ts,1,1)}</td><td>${x.a=="s"?"Sell":x.a=="p"?"Split":"Buy"}</td><td><b>${esc(x.t)}</b><span class="chip">${esc(x.c)}</span></td><td>${x.a=="p"?"×"+(+(+x.q).toFixed(6)):nf(+x.q,4)}</td><td>${x.a=="p"?"–":px(+x.p)}</td><td>${x.a=="p"?"–":nf(x.q*x.p)}</td><td class="${x.a=="s"?cl(x.rl):""}">${x.a=="s"&&isFinite(x.rl)?sg(x.rl):"–"}</td></tr>`).join("")+"</tbody>":"<tbody><tr><td>No transactions yet. Buys and sells you record above will be listed here.</td></tr></tbody>";
+  $("#txpg").innerHTML=N?`<button type="button" data-tp="-1"${TXP<=0?" disabled":""}>Previous</button><span>Page ${TXP+1} of ${pg} · ${N} transaction${N==1?"":"s"}</span><button type="button" data-tp="1"${TXP>=pg-1?" disabled":""}>Next</button>`:""}
+$("#txb").onclick=()=>{sto.set("pt_txv",sto.get("pt_txv")==="0"?"1":"0");txr()};
+$("#txpg").onclick=e=>{const b=e.target.closest("button");if(!b||b.disabled)return;TXP+=+b.dataset.tp;txr()};
+/* Holdings filters */
+const MFS=new Set();
+let CV=new Set(["ath","mom","pl"]);
+try{const v=JSON.parse(sto.get("pt_hc2")||"null");if(Array.isArray(v))CV=new Set(v.filter(k=>k=="ath"||k=="mom"||k=="pl"))}catch(e){}
+const closeMs=()=>document.querySelectorAll(".mp,.ddp").forEach(x=>x.hidden=true);
+function msMake(w,items,S,o){
+  const b=w.querySelector("button"),p=w.querySelector(".mp");
+  const draw=()=>{
+    p.innerHTML=(o.all?`<label><input type="checkbox" data-k="*"${S.size?"":" checked"}> ${o.all}</label>`:"")+items.map(([k,l])=>`<label><input type="checkbox" data-k="${k}"${S.has(k)?" checked":""}> ${esc(l)}</label>`).join("");
+    b.textContent=o.text(S)+" ▾"};
+  b.onclick=e=>{e.stopPropagation();const open=!p.hidden;closeMs();p.hidden=open};
+  p.onclick=e=>e.stopPropagation();
+  p.onchange=e=>{const k=e.target.dataset.k;if(k=="*")S.clear();else if(e.target.checked)S.add(k);else S.delete(k);draw();o.on()};
+  draw()}
+msMake($("#mfw"),MKS.map(k=>[k,MK[k].n]),MFS,{all:"All markets",text:S=>!S.size||S.size>=MKS.length?"All markets":S.size<=2?MKS.filter(k=>S.has(k)).map(k=>MK[k].n).join(", "):S.size+" markets",on:rows});
+msMake($("#cvw"),[["ath","ATH & vs ATH"],["mom","MoM, QoQ, YoY, YTD"],["pl","P/L"]],CV,{text:S=>S.size>=3?"All":S.size?S.size+" of 3":"None",on:()=>{sto.set("pt_hc2",JSON.stringify([...CV]));rows()}});
+document.addEventListener("click",closeMs);
+document.addEventListener("keydown",e=>{if(e.key=="Escape")closeMs()});
+
+/* custom dropdowns replacing native selects */
+(function(){
+  const vd=Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,"value"),dd=Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,"disabled");
+  const chk='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+  function make(sel){
+    if(!sel||sel.parentNode.classList.contains("dd"))return;
+    const w=document.createElement("span");w.className="dd";sel.parentNode.insertBefore(w,sel);w.appendChild(sel);
+    const b=document.createElement("button");b.type="button";b.className="ddb";b.setAttribute("aria-haspopup","listbox");
+    const p=document.createElement("div");p.className="ddp";p.hidden=true;p.setAttribute("role","listbox");
+    w.append(b,p);
+    const lab=()=>{const o=sel.options[sel.selectedIndex];b.textContent=(o?o.textContent:"")+" ▾";b.disabled=sel.disabled;if(sel.getAttribute("aria-label"))b.setAttribute("aria-label",sel.getAttribute("aria-label"))};
+    Object.defineProperty(sel,"value",{get(){return vd.get.call(this)},set(v){vd.set.call(this,v);lab()},configurable:true});
+    Object.defineProperty(sel,"disabled",{get(){return dd.get.call(this)},set(v){dd.set.call(this,v);lab()},configurable:true});
+    b.onclick=e=>{e.stopPropagation();const open=!p.hidden;closeMs();if(open)return;
+      p.innerHTML=[...sel.options].map((o,i)=>o.hidden?"":`<button type="button" class="ddi${i==sel.selectedIndex?" on":""}" role="option" aria-selected="${i==sel.selectedIndex}" data-i="${i}"><span class="ddk">${i==sel.selectedIndex?chk:""}</span>${esc(o.textContent)}</button>`).join("");
+      p.className="ddp";p.hidden=false;
+      const r=p.getBoundingClientRect();
+      if(r.right>innerWidth-8)p.classList.add("rt");
+      if(r.bottom>innerHeight-8&&b.getBoundingClientRect().top>r.height+16)p.classList.add("up");
+      const on=p.querySelector(".on");if(on)on.scrollIntoView({block:"nearest"})};
+    p.onclick=e=>{e.stopPropagation();const i=e.target.closest(".ddi");if(!i)return;
+      const o=sel.options[+i.dataset.i];p.hidden=true;
+      if(o&&sel.selectedIndex!=+i.dataset.i){sel.selectedIndex=+i.dataset.i;lab();sel.dispatchEvent(new Event("change",{bubbles:true}))}};
+    sel.addEventListener("change",lab);
+    lab()}
+  ["#sc-lang","#sc-ccy","#hr","#gb","#fs","#rf","#fxs","#cvf","#cvt"].forEach(q=>make($(q)));
+})();
+/* language & currency */
+const I18N={"zh-Hans": {"d": {"Portfolio tracker": "投资组合追踪器", "Sections": "版块", "Portfolio value over time": "投资组合价值走势", "Target allocation": "目标配置", "Add holding or record a trade": "新增持仓或记录交易", "Edit holding": "编辑持仓", "Holdings": "持仓", "User guide": "使用指南", "Total AUM": "总资产（AUM）", "By market": "按市场", "By currency": "按货币", "Range": "区间", "Market": "市场", "Performance": "表现", "Group by": "分组", "Action": "操作", "Buy / add": "买入 / 加仓", "Sell": "卖出", "Buy": "买入", "Split": "拆股", "Stock split / reverse split": "拆股 / 合股", "Ticker / fund name": "代码 / 基金名称", "Search ticker or company": "搜索代码或公司", "Units": "数量", "Price paid": "买入价", "Sale price": "卖出价", "WAC": "平均成本", "Split ratio (new shares per 1 old)": "拆股比例（每 1 股旧股换新股数）", "New price after split (optional)": "拆股后新价格（可选）", "Current price (optional)": "当前价格（可选）", "Auto": "自动", "Save": "保存", "Cancel": "取消", "Undo": "撤销", "Nothing to undo": "没有可撤销的操作", "Transactions": "交易记录", "Hide transactions": "隐藏交易记录", "Previous": "上一页", "Next": "下一页", "NAV table link (Principal funds, optional)": "净值表链接（Principal 基金，可选）", "Date (MYT)": "日期 (MYT)", "Ticker": "代码", "Price": "价格", "Amount": "金额", "Realized P/L (MYR)": "已实现盈亏 (MYR)", "Realized P/L": "已实现盈亏", "Today": "今日", "% of AUM": "占比", "P/L %": "盈亏 %", "P/L": "盈亏", "P/L:": "盈亏：", "Currency": "货币", "Language": "语言", "Language & currency": "语言与货币", "Value (market ccy)": "市值（市场货币）", "P/L (market ccy)": "盈亏（市场货币）", "Value ({c})": "市值 ({c})", "P/L ({c})": "盈亏 ({c})", "To rebalance ({c})": "再平衡金额 ({c})", "Day %": "日涨跌 %", "ATH (5Y)": "历史高点 (5年)", "vs ATH": "较高点", "MoM %": "月环比 %", "QoQ %": "季环比 %", "YoY %": "同比 %", "YTD %": "年初至今 %", "Actual %": "实际 %", "Target %": "目标 %", "Drift": "偏离", "On target": "已达标", "Enter a target % for each market above.": "请在上方输入各市场的目标 %。", "Drift of 5 points or more is highlighted. Amounts are based on current value.": "偏离 5 个百分点以上会高亮显示。金额以当前市值计算。", "Cost": "成本", "Profit (above cost)": "盈利（高于成本）", "Intraday points are saved every 5 minutes while the tracker is open. This range needs at least two.": "追踪器开启期间每 5 分钟保存一个日内数据点，此区间至少需要两个点。", "One point is saved for each day you open the tracker. This range needs at least two days.": "每天打开追踪器会保存一个数据点，此区间至少需要两天。", "No holdings yet. Add one above.": "暂无持仓，请在上方新增。", "No holdings in the selected markets.": "所选市场没有持仓。", "No transactions yet. Buys and sells you record above will be listed here.": "暂无交易记录。你在上方记录的买入和卖出会显示在这里。", "All markets": "所有市场", "ATH & vs ATH": "历史高点及较高点", "MoM, QoQ, YoY, YTD": "月环比、季环比、同比、年初至今", "All": "全部", "None": "无", "United States": "美国", "Taiwan": "台湾", "Singapore": "新加坡", "Crypto": "加密货币", "Malaysia": "马来西亚", "China": "中国", "Japan": "日本", "United Kingdom": "英国", "South Korea": "韩国", "Hong Kong": "香港", "stale": "过期", "Connecting…": "连接中…", "(Connected)": "(已连接)", "(Error)": "(错误)", "(Connecting)": "(连接中)", "Stock refresh": "股价刷新", "Test connection": "测试连接", "Converter": "货币换算", "Auto rates": "自动汇率", "USDT follows USD unless you edit it.": "除非手动修改，USDT 沿用 USD 汇率。", "No stock source is reachable from this browser.": "此浏览器无法连接任何股价来源。", "No market data available": "暂无市场数据", "Menu": "菜单", "Open menu": "打开菜单", "Close menu": "关闭菜单", "Close": "关闭", "Export backup": "导出备份", "Import backup": "导入备份", "Back to top": "返回顶部", "Edit": "编辑", "Delete": "删除", "Swap currencies": "互换货币", "Currency converter": "货币换算", "Converted amount": "换算后金额", "From currency": "源货币", "To currency": "目标货币", "Switch to light mode": "切换到浅色模式", "Switch to dark mode": "切换到深色模式", "ATH date not available yet": "暂无历史高点日期", "Privacy Policy": "隐私政策", "Copyright & Credits": "版权与致谢", "Pick a ticker from the search list, then enter units.": "请从搜索列表中选择代码，然后输入数量。", "Enter the price.": "请输入价格。"}, "r": [["^(Buy|Sell) (\\d[\\d,]*)$", "@1 $2"], ["^Targets add up to (.+)%, not 100%\\. Amounts use the targets as entered\\.$", "目标合计为 $1%，不是 100%。金额按输入的目标计算。"], ["^Loss \\(below cost\\) · Shown in (.+)$", "亏损（低于成本）· 以 $1 显示"], ["^Cost: (.+)$", "成本：$1"], ["^Value: (.+)$", "市值：$1"], ["^Show transactions \\((\\d+)\\)$", "显示交易记录 ($1)"], ["^Page (\\d+) of (\\d+) · (\\d+) transactions?$", "第 $1 / $2 页 · 共 $3 笔交易"], ["^(\\d+) markets$", "$1 个市场"], ["^(\\d+) of 3$", "$1 / 3"], ["^\\(Mon-Fri (.+)\\)$", "(周一至周五 $1)"], ["^\\(Mon-Sun (.+)\\)$", "(周一至周日 $1)"], ["^· (\\d+) quote\\(s\\) stale$", "· $1 个报价已过期"], ["^Updated (.+)$", "更新于 $1"], ["^(\\d+) sec$", "$1 秒"], ["^ATH date: (.+)$", "历史高点日期：$1"], ["^Open on (.+)$", "在 $1 打开"], ["^total P/L · cost (.+)$", "总盈亏 · 成本 $1"], ["^Saved (.+)\\.$", "已保存 $1。"], ["^Added (.+)\\.$", "已添加 $1。"], ["^Bought (\\S+) (.+)\\.$", "已买入 $2 $1。"], ["^Sold (\\S+) (.+)\\.$", "已卖出 $2 $1。"], ["^You don't hold (.+)\\.$", "你没有持有 $1。"], ["^You only hold (.+) units\\.$", "你只持有 $1 单位。"], ["^(.+) %$", "@1 %"]]}, "zh-Hant": {"d": {"Portfolio tracker": "投資組合追蹤器", "Sections": "版塊", "Portfolio value over time": "投資組合價值走勢", "Target allocation": "目標配置", "Add holding or record a trade": "新增持倉或記錄交易", "Edit holding": "編輯持倉", "Holdings": "持倉", "User guide": "使用指南", "Total AUM": "總資產（AUM）", "By market": "按市場", "By currency": "按貨幣", "Range": "區間", "Market": "市場", "Performance": "表現", "Group by": "分組", "Action": "操作", "Buy / add": "買入 / 加倉", "Sell": "賣出", "Buy": "買入", "Split": "拆股", "Stock split / reverse split": "拆股 / 合股", "Ticker / fund name": "程式碼 / 基金名稱", "Search ticker or company": "搜尋程式碼或公司", "Units": "數量", "Price paid": "買入價", "Sale price": "賣出價", "WAC": "平均成本", "Split ratio (new shares per 1 old)": "拆股比例（每 1 股舊股換新股數）", "New price after split (optional)": "拆股後新價格（可選）", "Current price (optional)": "當前價格（可選）", "Auto": "自動", "Save": "儲存", "Cancel": "取消", "Undo": "撤銷", "Nothing to undo": "沒有可撤銷的操作", "Transactions": "交易記錄", "Hide transactions": "隱藏交易記錄", "Previous": "上一頁", "Next": "下一頁", "NAV table link (Principal funds, optional)": "淨值錶連結（Principal 基金，可選）", "Date (MYT)": "日期 (MYT)", "Ticker": "程式碼", "Price": "價格", "Amount": "金額", "Realized P/L (MYR)": "已實現盈虧 (MYR)", "Realized P/L": "已實現盈虧", "Today": "今日", "% of AUM": "佔比", "P/L %": "盈虧 %", "P/L": "盈虧", "P/L:": "盈虧：", "Currency": "貨幣", "Language": "語言", "Language & currency": "語言與貨幣", "Value (market ccy)": "市值（市場貨幣）", "P/L (market ccy)": "盈虧（市場貨幣）", "Value ({c})": "市值 ({c})", "P/L ({c})": "盈虧 ({c})", "To rebalance ({c})": "再平衡金額 ({c})", "Day %": "日漲跌 %", "ATH (5Y)": "歷史高點 (5年)", "vs ATH": "較高點", "MoM %": "月環比 %", "QoQ %": "季環比 %", "YoY %": "同比 %", "YTD %": "年初至今 %", "Actual %": "實際 %", "Target %": "目標 %", "Drift": "偏離", "On target": "已達標", "Enter a target % for each market above.": "請在上方輸入各市場的目標 %。", "Drift of 5 points or more is highlighted. Amounts are based on current value.": "偏離 5 個百分點以上會高亮顯示。金額以當前市值計算。", "Cost": "成本", "Profit (above cost)": "盈利（高於成本）", "Intraday points are saved every 5 minutes while the tracker is open. This range needs at least two.": "追蹤器開啟期間每 5 分鐘儲存一個日內資料點，此區間至少需要兩個點。", "One point is saved for each day you open the tracker. This range needs at least two days.": "每天開啟追蹤器會儲存一個資料點，此區間至少需要兩天。", "No holdings yet. Add one above.": "暫無持倉，請在上方新增。", "No holdings in the selected markets.": "所選市場沒有持倉。", "No transactions yet. Buys and sells you record above will be listed here.": "暫無交易記錄。你在上方記錄的買入和賣出會顯示在這裡。", "All markets": "所有市場", "ATH & vs ATH": "歷史高點及較高點", "MoM, QoQ, YoY, YTD": "月環比、季環比、同比、年初至今", "All": "全部", "None": "無", "United States": "美國", "Taiwan": "臺灣", "Singapore": "新加坡", "Crypto": "加密貨幣", "Malaysia": "馬來西亞", "China": "中國", "Japan": "日本", "United Kingdom": "英國", "South Korea": "韓國", "Hong Kong": "香港", "stale": "過期", "Connecting…": "連線中…", "(Connected)": "(已連線)", "(Error)": "(錯誤)", "(Connecting)": "(連線中)", "Stock refresh": "股價重新整理", "Test connection": "測試連線", "Converter": "貨幣換算", "Auto rates": "自動匯率", "USDT follows USD unless you edit it.": "除非手動修改，USDT 沿用 USD 匯率。", "No stock source is reachable from this browser.": "此瀏覽器無法連線任何股價來源。", "No market data available": "暫無市場資料", "Menu": "選單", "Open menu": "開啟選單", "Close menu": "關閉選單", "Close": "關閉", "Export backup": "匯出備份", "Import backup": "匯入備份", "Back to top": "返回頂部", "Edit": "編輯", "Delete": "刪除", "Swap currencies": "互換貨幣", "Currency converter": "貨幣換算", "Converted amount": "換算後金額", "From currency": "源貨幣", "To currency": "目標貨幣", "Switch to light mode": "切換到淺色模式", "Switch to dark mode": "切換到深色模式", "ATH date not available yet": "暫無歷史高點日期", "Privacy Policy": "隱私政策", "Copyright & Credits": "版權與致謝", "Pick a ticker from the search list, then enter units.": "請從搜尋列表中選擇程式碼，然後輸入數量。", "Enter the price.": "請輸入價格。"}, "r": [["^(Buy|Sell) (\\d[\\d,]*)$", "@1 $2"], ["^Targets add up to (.+)%, not 100%\\. Amounts use the targets as entered\\.$", "目標合計為 $1%，不是 100%。金額按輸入的目標計算。"], ["^Loss \\(below cost\\) · Shown in (.+)$", "虧損（低於成本）· 以 $1 顯示"], ["^Cost: (.+)$", "成本：$1"], ["^Value: (.+)$", "市值：$1"], ["^Show transactions \\((\\d+)\\)$", "顯示交易記錄 ($1)"], ["^Page (\\d+) of (\\d+) · (\\d+) transactions?$", "第 $1 / $2 頁 · 共 $3 筆交易"], ["^(\\d+) markets$", "$1 個市場"], ["^(\\d+) of 3$", "$1 / 3"], ["^\\(Mon-Fri (.+)\\)$", "(週一至週五 $1)"], ["^\\(Mon-Sun (.+)\\)$", "(週一至週日 $1)"], ["^· (\\d+) quote\\(s\\) stale$", "· $1 個報價已過期"], ["^Updated (.+)$", "更新於 $1"], ["^(\\d+) sec$", "$1 秒"], ["^ATH date: (.+)$", "歷史高點日期：$1"], ["^Open on (.+)$", "在 $1 開啟"], ["^total P/L · cost (.+)$", "總盈虧 · 成本 $1"], ["^Saved (.+)\\.$", "已儲存 $1。"], ["^Added (.+)\\.$", "已新增 $1。"], ["^Bought (\\S+) (.+)\\.$", "已買入 $2 $1。"], ["^Sold (\\S+) (.+)\\.$", "已賣出 $2 $1。"], ["^You don't hold (.+)\\.$", "你沒有持有 $1。"], ["^You only hold (.+) units\\.$", "你只持有 $1 單位。"], ["^(.+) %$", "@1 %"]]}};
+Object.values(I18N).forEach(I=>{I.r=I.r.map(([a,b])=>[new RegExp(a),b])});
+let LANG=sto.get("pt_lang");if(!["en-US","en-GB","zh-Hans","zh-Hant"].includes(LANG))LANG="en-US";
+let DIRTY=false,AB=false,AT=0;
+const GZ={"zh-Hans": {"g": "<p class=\"d\">逐项介绍追踪器的各个功能。所有数据只保存在此浏览器中。</p>\n<section><h4>1. 开始使用</h4><ol><li>点击左上角的 Logo 打开此菜单。用开关显示或隐藏“投资组合价值走势”、“目标配置”、“新增持仓或记录交易”和“持仓”。</li><li>点击顶部栏的地球图标，选择语言（EN US、EN UK、简中、繁中）和显示货币，然后按“保存”。总资产（AUM）、盈亏和各项价值都会以该货币显示（内部统一以 MYR 储存）。</li><li>太阳 / 月亮按钮用于切换浅色和深色模式。</li><li>示例持仓（AAPL、2330.TW、BTC 和示例基金）可以编辑或删除。</li></ol></section>\n<section><h4>2. 仪表板</h4><ul><li><b>总资产（AUM）</b>为所有持仓的当前价值。下方显示总盈亏与成本、今日变动，以及卖出产生的已实现盈亏。</li><li>环形图和图例显示各市场占比，将鼠标移到扇区上可查看其价值和占比。</li><li><b>按市场</b>和<b>按货币</b>表格汇总市值、占比和盈亏，点击列标题可排序。</li></ul></section>\n<section><h4>3. 新增持仓（买入）</h4><ol><li>打开“新增持仓或记录交易”，保持操作为“买入 / 加仓”。</li><li>输入代码或公司名称，然后<b>从列表中选择</b>。市场和货币会自动设置。如果列表中没有，可使用列表底部的“Use … as”选项（该选项以英文显示），例如加密货币、马来西亚股票、新加坡股票、台湾股票。</li><li>输入<b>数量</b>和<b>买入价</b>。当前价格为可选项，股票和加密货币会自动获取。</li><li>按<b>保存</b>。买入已持有的代码会合并数量和平均成本（WAC，加权平均成本）。</li></ol></section>\n<section><h4>4. 马来西亚共同基金</h4><ul><li>搜索基金名称，选择“Use “…” as a Malaysia mutual fund”。</li><li>在<b>当前价格</b>中输入价格，净值变动时请自行更新。</li><li>Principal 基金可粘贴净值表 CSV 链接（以 <code>_format=csv</code> 结尾的 Download CSV 链接），即可自动获取价格。</li></ul></section>\n<section><h4>5. 卖出、拆股、编辑、删除、撤销</h4><ul><li><b>卖出</b>：选择“卖出”，选好代码，输入数量和卖出价。盈亏会计入已实现盈亏，持仓清空后该行会被移除。</li><li><b>拆股 / 合股</b>：输入比例（10 代表 1 拆 10，0.1 代表 10 合 1）。数量、平均成本和历史高点会自动调整。</li><li><b>编辑</b>：点击持仓表中的铅笔图标，修改后保存，或取消。</li><li><b>删除</b>：点击垃圾桶图标。删除后无法撤销。</li><li><b>撤销</b>可还原最近的买入、卖出、拆股和编辑（本次使用期间最多 20 步）。</li></ul></section>\n<section><h4>6. 交易记录</h4><p>点击表单下方的<b>显示交易记录</b>，可查看买入、卖出和拆股记录，包括日期（马来西亚时间）、价格、金额和已实现盈亏。每页显示 10 笔。</p></section>\n<section><h4>7. 持仓表</h4><ul><li><b>市场</b>筛选显示的市场。<b>表现</b>可开关各列组（历史高点、月环比 / 季环比 / 同比 / 年初至今、盈亏）。<b>分组</b>可按市场、货币或不分组。</li><li>点击任意列标题可排序。点击代码可在 Yahoo Finance 或 Binance 打开。</li><li><span style=\"color:#eab308;font-weight:600\">黄色</span>价格表示该市场目前开市。市场名称旁的时间为马来西亚时间。</li><li>将鼠标移到历史高点数值上可查看日期。“过期”标记表示无法获取最新报价。</li><li>日涨跌、月环比、季环比、同比和年初至今均为当前价格与过往收盘价的比较。手动定价的基金显示破折号。</li></ul></section>\n<section><h4>8. 投资组合价值走势</h4><p>选择区间（4H 至 5Y）。黄线为成本；高于成本的区域为绿色，低于成本为红色。将鼠标移到（或触碰）图表上可查看该时点的价值、成本和盈亏。历史数据在追踪器开启期间保存，因此每个区间至少需要两个数据点。</p></section>\n<section><h4>9. 目标配置</h4><p>为每个市场输入目标 %。表格显示实际 %、偏离（5 个百分点以上会高亮）以及以显示货币计的再平衡买卖金额。目标合计应为 100%。</p></section>\n<section><h4>10. 页脚工具</h4><ul><li><b>汇率</b>：选择货币并输入你自己的兑 MYR 汇率。<b>自动汇率</b>可恢复实时汇率。</li><li><b>货币换算</b>：在任一框输入金额，选择任意两种货币，并可使用互换按钮。</li><li><b>股价刷新</b>设置报价更新频率（5 至 60 秒）。<b>测试连接</b>会检查 Yahoo Finance、Binance 和汇率来源，以状态圆点显示。</li></ul></section>\n<section><h4>11. 备份数据</h4><ul><li>使用顶部栏的下载图标导出备份文件，上传图标导入备份。</li><li>数据只保存在此浏览器中。清除网站数据会将其删除，因此请定期导出，更换设备或浏览器前也请先导出。</li></ul></section>\n<section><h4>12. 常见问题</h4><ul><li><b>价格不更新</b>：点击“测试连接”。若 Yahoo Finance 显示错误，请稍候一分钟再试。</li><li><b>找不到代码</b>：使用搜索列表中的“Use … as”选项，并检查后缀（.KL、.SI、.TW、.HK、.T、.L、.KS、.SS、.SZ）。</li><li><b>总额不对</b>：检查每个持仓的货币和页脚的汇率。</li></ul><p class=\"d\">仅供追踪使用。价格可能延迟或不准确，也不构成投资建议。</p></section>", "f": "<li>价格按下方“股价刷新”间隔更新：美股、英股及亚太股票报价来自 Yahoo Finance，加密货币来自 Binance（USDT 交易对），共同基金需手动输入。</li>\n      <li>成本按当前汇率换算，因此不会单独追踪汇兑损益。</li>\n      <li>5 年高点及其日期由每日最高价计算，每 6 小时重新检查一次。</li>\n      <li>马来西亚共同基金以你输入过的最高净值作为其历史高点。</li>\n      <li>年初至今 % 为当前价格相对上一年最后收盘价的涨跌。手动定价的基金显示破折号。</li>\n      <li>月环比、季环比和同比 % 为当前价格相对 1 个月、3 个月和 12 个月前同一日期（或之前最近一个收盘日）收盘价的涨跌。历史数据不足的基金和代码显示破折号。</li>\n      <li>英国报价若以便士（GBp）计价，会换算为英镑（GBP）。在伦敦上市但以其他货币（如 USD）交易的基金，仍按 GBP 估值。</li>\n      <li>按市场分组时，市场名称旁的交易时间为马来西亚时间（MYT）。该<span style=\"color:#eab308;font-weight:600\">市场开市</span>时，时间会变成<span style=\"color:#eab308;font-weight:600\">黄色</span>，开市市场的价格也以<span style=\"color:#eab308;font-weight:600\">黄色</span>显示。午休时间（香港、日本、中国）未显示。</li>\n    ", "b": "买入已持有的代码会合并数量并重新计算平均成本（WAC）。卖出会计入已实现盈亏（按今日汇率换算为 MYR），持仓清空后该行会被移除。拆股会将数量乘以比例，并将平均成本和历史高点除以比例，然后获取新的实时价格（或使用“拆股后新价格”栏）。"}, "zh-Hant": {"g": "<p class=\"d\">逐項介紹追蹤器的各個功能。所有資料只儲存在此瀏覽器中。</p>\n<section><h4>1. 開始使用</h4><ol><li>點選左上角的 Logo 開啟此選單。用開關顯示或隱藏“投資組合價值走勢”、“目標配置”、“新增持倉或記錄交易”和“持倉”。</li><li>點選頂部欄的地球圖示，選擇語言（EN US、EN UK、簡中、繁中）和顯示貨幣，然後按“儲存”。總資產（AUM）、盈虧和各項價值都會以該貨幣顯示（內部統一以 MYR 儲存）。</li><li>太陽 / 月亮按鈕用於切換淺色和深色模式。</li><li>示例持倉（AAPL、2330.TW、BTC 和示例基金）可以編輯或刪除。</li></ol></section>\n<section><h4>2. 儀表板</h4><ul><li><b>總資產（AUM）</b>為所有持倉的當前價值。下方顯示總盈虧與成本、今日變動，以及賣出產生的已實現盈虧。</li><li>環形圖和圖例顯示各市場佔比，將滑鼠移到扇區上可檢視其價值和佔比。</li><li><b>按市場</b>和<b>按貨幣</b>表格彙總市值、佔比和盈虧，點選列標題可排序。</li></ul></section>\n<section><h4>3. 新增持倉（買入）</h4><ol><li>開啟“新增持倉或記錄交易”，保持操作為“買入 / 加倉”。</li><li>輸入程式碼或公司名稱，然後<b>從列表中選擇</b>。市場和貨幣會自動設定。如果列表中沒有，可使用列表底部的“Use … as”選項（該選項以英文顯示），例如加密貨幣、馬來西亞股票、新加坡股票、臺灣股票。</li><li>輸入<b>數量</b>和<b>買入價</b>。當前價格為可選項，股票和加密貨幣會自動獲取。</li><li>按<b>儲存</b>。買入已持有的程式碼會合並數量和平均成本（WAC，加權平均成本）。</li></ol></section>\n<section><h4>4. 馬來西亞共同基金</h4><ul><li>搜尋基金名稱，選擇“Use “…” as a Malaysia mutual fund”。</li><li>在<b>當前價格</b>中輸入價格，淨值變動時請自行更新。</li><li>Principal 基金可貼上淨值表 CSV 連結（以 <code>_format=csv</code> 結尾的 Download CSV 連結），即可自動獲取價格。</li></ul></section>\n<section><h4>5. 賣出、拆股、編輯、刪除、撤銷</h4><ul><li><b>賣出</b>：選擇“賣出”，選好程式碼，輸入數量和賣出價。盈虧會計入已實現盈虧，持倉清空後該行會被移除。</li><li><b>拆股 / 合股</b>：輸入比例（10 代表 1 拆 10，0.1 代表 10 合 1）。數量、平均成本和歷史高點會自動調整。</li><li><b>編輯</b>：點選持倉表中的鉛筆圖示，修改後儲存，或取消。</li><li><b>刪除</b>：點選垃圾桶圖示。刪除後無法撤銷。</li><li><b>撤銷</b>可還原最近的買入、賣出、拆股和編輯（本次使用期間最多 20 步）。</li></ul></section>\n<section><h4>6. 交易記錄</h4><p>點選表單下方的<b>顯示交易記錄</b>，可檢視買入、賣出和拆股記錄，包括日期（馬來西亞時間）、價格、金額和已實現盈虧。每頁顯示 10 筆。</p></section>\n<section><h4>7. 持倉表</h4><ul><li><b>市場</b>篩選顯示的市場。<b>表現</b>可開關各列組（歷史高點、月環比 / 季環比 / 同比 / 年初至今、盈虧）。<b>分組</b>可按市場、貨幣或不分組。</li><li>點選任意列標題可排序。點選程式碼可在 Yahoo Finance 或 Binance 開啟。</li><li><span style=\"color:#eab308;font-weight:600\">黃色</span>價格表示該市場目前開市。市場名稱旁的時間為馬來西亞時間。</li><li>將滑鼠移到歷史高點數值上可檢視日期。“過期”標記表示無法獲取最新報價。</li><li>日漲跌、月環比、季環比、同比和年初至今均為當前價格與過往收盤價的比較。手動定價的基金顯示破折號。</li></ul></section>\n<section><h4>8. 投資組合價值走勢</h4><p>選擇區間（4H 至 5Y）。黃線為成本；高於成本的區域為綠色，低於成本為紅色。將滑鼠移到（或觸碰）圖表上可檢視該時點的價值、成本和盈虧。歷史資料在追蹤器開啟期間儲存，因此每個區間至少需要兩個資料點。</p></section>\n<section><h4>9. 目標配置</h4><p>為每個市場輸入目標 %。表格顯示實際 %、偏離（5 個百分點以上會高亮）以及以顯示貨幣計的再平衡買賣金額。目標合計應為 100%。</p></section>\n<section><h4>10. 頁尾工具</h4><ul><li><b>匯率</b>：選擇貨幣並輸入你自己的兌 MYR 匯率。<b>自動匯率</b>可恢復實時匯率。</li><li><b>貨幣換算</b>：在任一框輸入金額，選擇任意兩種貨幣，並可使用互換按鈕。</li><li><b>股價重新整理</b>設定報價更新頻率（5 至 60 秒）。<b>測試連線</b>會檢查 Yahoo Finance、Binance 和匯率來源，以狀態圓點顯示。</li></ul></section>\n<section><h4>11. 備份資料</h4><ul><li>使用頂部欄的下載圖示匯出備份檔案，上傳圖示匯入備份。</li><li>資料只儲存在此瀏覽器中。清除網站資料會將其刪除，因此請定期匯出，更換裝置或瀏覽器前也請先匯出。</li></ul></section>\n<section><h4>12. 常見問題</h4><ul><li><b>價格不更新</b>：點選“測試連線”。若 Yahoo Finance 顯示錯誤，請稍候一分鐘再試。</li><li><b>找不到程式碼</b>：使用搜尋列表中的“Use … as”選項，並檢查字尾（.KL、.SI、.TW、.HK、.T、.L、.KS、.SS、.SZ）。</li><li><b>總額不對</b>：檢查每個持倉的貨幣和頁尾的匯率。</li></ul><p class=\"d\">僅供追蹤使用。價格可能延遲或不準確，也不構成投資建議。</p></section>", "f": "<li>價格按下方“股價重新整理”間隔更新：美股、英股及亞太股票報價來自 Yahoo Finance，加密貨幣來自 Binance（USDT 交易對），共同基金需手動輸入。</li>\n      <li>成本按當前匯率換算，因此不會單獨追蹤匯兌損益。</li>\n      <li>5 年高點及其日期由每日最高價計算，每 6 小時重新檢查一次。</li>\n      <li>馬來西亞共同基金以你輸入過的最高淨值作為其歷史高點。</li>\n      <li>年初至今 % 為當前價格相對上一年最後收盤價的漲跌。手動定價的基金顯示破折號。</li>\n      <li>月環比、季環比和同比 % 為當前價格相對 1 個月、3 個月和 12 個月前同一日期（或之前最近一個收盤日）收盤價的漲跌。歷史資料不足的基金和程式碼顯示破折號。</li>\n      <li>英國報價若以便士（GBp）計價，會換算為英鎊（GBP）。在倫敦上市但以其他貨幣（如 USD）交易的基金，仍按 GBP 估值。</li>\n      <li>按市場分組時，市場名稱旁的交易時間為馬來西亞時間（MYT）。該<span style=\"color:#eab308;font-weight:600\">市場開市</span>時，時間會變成<span style=\"color:#eab308;font-weight:600\">黃色</span>，開市市場的價格也以<span style=\"color:#eab308;font-weight:600\">黃色</span>顯示。午休時間（香港、日本、中國）未顯示。</li>\n    ", "b": "買入已持有的程式碼會合並數量並重新計算平均成本（WAC）。賣出會計入已實現盈虧（按今日匯率換算為 MYR），持倉清空後該行會被移除。拆股會將數量乘以比例，並將平均成本和歷史高點除以比例，然後獲取新的實時價格（或使用“拆股後新價格”欄）。"}},EN0={g:$("#lg-guide").innerHTML,f:$("ol.note").innerHTML,b:$("#bn").innerHTML};
+function trk(k){return LANG.startsWith("zh")&&I18N[LANG].d[k]!=null?I18N[LANG].d[k]:null}
+function trc(c){const I=I18N[LANG];
+  if(I.d[c]!=null)return I.d[c];
+  let m=/^(.*) \u25be$/.exec(c);if(m)return trc(m[1])+" \u25be";
+  for(const [re,tp] of I.r){const x=re.exec(c);if(x)return tp.replace(/([$@])(\d)/g,(_,k,i)=>k=="$"?x[i]:trc(x[i]))}
+  return c}
+function tr(s){
+  if(!s||LANG=="en-US")return s;
+  if(LANG=="en-GB")return s.replace(/Realized/g,"Realised");
+  const m=/^(\s*)([\s\S]*?)(\s*)$/.exec(s);if(!m[2])return s;
+  const t=trc(m[2]);return t===m[2]?s:m[1]+t+m[3]}
+function applyLang(){
+  AB=true;
+  {const zk=LANG.startsWith("zh")?LANG:null,key=zk||"en";[["#lg-guide","g"],["ol.note","f"],["#bn","b"]].forEach(([q,k])=>{const e=$(q);if((e.__l||"en")!==key){e.innerHTML=zk?GZ[zk][k]:EN0[k];e.__l=key}})}
+  const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,{acceptNode:n=>(/^(SCRIPT|STYLE|TEXTAREA)$/.test(n.parentNode.nodeName)||n.parentNode.closest("[data-nt]"))?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT});
+  let n;while(n=w.nextNode()){const v=n.nodeValue;let o=v;if(n.__t!=null&&v===n.__t)o=n.__o;const t=tr(o);if(t!==v)n.nodeValue=t;n.__o=o;n.__t=t}
+  document.querySelectorAll("[title],[placeholder],[aria-label]").forEach(e=>{const a=e.__oa||(e.__oa={});["title","placeholder","aria-label"].forEach(k=>{if(!e.hasAttribute(k))return;const v=e.getAttribute(k);let o=v;if(a[k]&&v===a[k][1])o=a[k][0];const t=tr(o);if(t!==v)e.setAttribute(k,t);a[k]=[o,t]})});
+  document.querySelectorAll(".dd>select").forEach(x=>{x.value=x.value});
+  document.documentElement.lang=LANG;DIRTY=LANG!="en-US";
+  MO.takeRecords();AB=false}
+const MO=new MutationObserver(()=>{if(AB)return;clearTimeout(AT);AT=setTimeout(()=>{if(DIRTY||LANG!="en-US")applyLang()},100)});
+MO.observe(document.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:["title","placeholder","aria-label"]});
+(function(){
+  const m=$("#stm"),L=$("#sc-lang"),C=$("#sc-ccy"),A=$("#aum-ccy");
+  const close=()=>{m.hidden=true};
+  $("#gl").onclick=()=>{C.value=A.value;L.value=LANG;m.hidden=false;$("#sts").focus()};
+  $("#stc").onclick=close;
+  m.addEventListener("click",e=>{if(e.target===m)close()});
+  document.addEventListener("keydown",e=>{if(e.key=="Escape"&&!m.hidden)close()});
+  $("#sts").onclick=()=>{
+    LANG=L.value;sto.set("pt_lang",LANG);
+    if(A.value!==C.value){A.value=C.value;A.dispatchEvent(new Event("change"))}
+    close();render();applyLang()}
+})();
+if(LANG!="en-US")applyLang();
+txr();renderNow();getfx();tick();loadHi();loadDay();
+setInterval(tick,1000);
+setInterval(getfx,300000);setInterval(()=>{if(!document.hidden)render()},15000);
+setInterval(loadHi,60000);setInterval(loadDay,60000);
+setInterval(livePx,20000);
+
+/* glass effect: pointer proximity + column highlight */
+(function(){
+  const G=[...document.querySelectorAll(".hero-flex,.box,.tg")];G.forEach(e=>e.classList.add("fxg"));
+  const st=document.createElement("style");let r="";
+  for(let i=1;i<=18;i++)r+=`table[data-hc="${i}"] tr:not(.g)>:nth-child(${i}){background-image:linear-gradient(var(--gt),var(--gt))}`;
+  st.textContent=r;document.head.appendChild(st);
+  let px=0,py=0,q=0,act=false,ht=null;
+  function run(){q=0;const no=$("#nav").classList.contains("open");G.forEach(e=>{
+    if(!e.getClientRects().length){e.classList.remove("on");return}
+    const b=e.getBoundingClientRect(),dx=Math.max(b.left-px,0,px-b.right),dy=Math.max(b.top-py,0,py-b.bottom);
+    if(act&&dx+dy===0&&(!no||e.classList.contains("tg")))e.classList.add("on")
+    else e.classList.remove("on")})}
+  addEventListener("scroll",()=>{if(act&&!q)q=requestAnimationFrame(run)},{passive:true});
+  function clr(){if(ht){ht.removeAttribute("data-hc");ht=null}}
+  document.addEventListener("pointermove",e=>{
+    if(e.pointerType=="touch")return;
+    px=e.clientX;py=e.clientY;act=true;if(!q)q=requestAnimationFrame(run);
+    const c=e.target.closest&&e.target.closest("td,th"),t=c&&c.closest("table");
+    if(!t||c.parentElement.classList.contains("g")||c.colSpan>1){clr();return}
+    if(ht&&ht!==t)clr();ht=t;t.setAttribute("data-hc",c.cellIndex+1)});
+  document.documentElement.addEventListener("mouseleave",()=>{act=false;clr();if(!q)q=requestAnimationFrame(run)});
+})();
+/* back to top */
+(function(){const b=$("#top"),u=()=>b.classList.toggle("on",scrollY>400);addEventListener("scroll",u,{passive:true});u();b.onclick=()=>scrollTo({top:0,behavior:"smooth"})})();
+/* legal modal */
+(function(){
+  const m=$("#lgm"),T={privacy:"Privacy Policy",copyright:"Copyright & Credits",guide:"User guide"};
+  function open(k){$("#lgt").textContent=T[k];["privacy","copyright","guide"].forEach(x=>$("#lg-"+x).hidden=x!==k);m.hidden=false;$("#lgm .pb").scrollTop=0;$("#lgx").focus()}
+  function close(){m.hidden=true}
+  document.querySelectorAll("[data-lg]").forEach(b=>b.onclick=()=>open(b.dataset.lg));
+  $("#gdb").addEventListener("click",()=>$("#nvx").click());
+  $("#lgx").onclick=close;
+  m.addEventListener("click",e=>{if(e.target===m)close()});
+  document.addEventListener("keydown",e=>{if(e.key=="Escape"&&!m.hidden)close()});
+})();
+</script>
+</body>
+</html>
