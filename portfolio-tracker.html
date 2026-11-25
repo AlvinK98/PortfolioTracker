@@ -227,6 +227,33 @@ footer{border-top-color:var(--ln)}
 
 /* Total AUM label: bigger and bold */
 .hero-left>.lb{font-size:22px;font-weight:700;line-height:1.2;letter-spacing:0}
+
+/* custom dropdowns: same dark rounded panel as the Performance menu */
+.dd{position:relative;display:inline-block}
+.dd>select{display:none!important}
+.ddb{white-space:nowrap}
+.tools .ddb{height:32px;padding:0 14px}
+.fm .dd{display:block}.fm .ddb{width:100%;text-align:left}
+.fx .ddb{padding:4px 12px}
+.ddp{position:absolute;left:0;top:100%;margin-top:4px;z-index:60;min-width:max(100%,150px);max-height:min(320px,60vh);overflow-y:auto;background:var(--pop);border:1px solid var(--ln);border-radius:20px;padding:6px;box-shadow:none}
+.ddp.up{top:auto;bottom:100%;margin:0 0 4px}
+.ddp.rt{left:auto;right:0}
+.ddi{display:flex;align-items:center;gap:8px;width:100%;padding:8px 12px;margin:0;border:0;border-radius:12px;background:none;color:var(--ink);font-size:.8125rem;font-weight:500;text-align:left;white-space:nowrap;cursor:pointer}
+.ddi:hover,.ddi:focus-visible{background:var(--ch);border:0}
+.ddi.on{font-weight:600}
+.ddk{width:14px;height:14px;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;color:var(--ac)}
+
+/* smaller Total AUM number and total P/L */
+.aum{font-size:clamp(30px,8vw,48px);letter-spacing:-.8px;white-space:normal}
+#aum-n{white-space:nowrap}
+.aum-u{font-size:.4em;margin-left:6px}
+#tpl>span:first-child{font-size:15px;margin-top:8px;white-space:nowrap}
+#tpl>span:first-child+.lb{font-size:12px}
+@media (min-width:700px){.aum{font-size:clamp(30px,3.6vw,52px);white-space:normal}}
+
+/* dropdown items stack vertically (override .hd div flex row) */
+.ddp:not([hidden]){display:block}
+.ddp .ddi{display:flex;width:100%}
 </style>
 </head>
 <body>
@@ -1181,7 +1208,7 @@ $("#txpg").onclick=e=>{const b=e.target.closest("button");if(!b||b.disabled)retu
 const MFS=new Set();
 let CV=new Set(["ath","mom","pl"]);
 try{const v=JSON.parse(sto.get("pt_hc2")||"null");if(Array.isArray(v))CV=new Set(v.filter(k=>k=="ath"||k=="mom"||k=="pl"))}catch(e){}
-const closeMs=()=>document.querySelectorAll(".mp").forEach(x=>x.hidden=true);
+const closeMs=()=>document.querySelectorAll(".mp,.ddp").forEach(x=>x.hidden=true);
 function msMake(w,items,S,o){
   const b=w.querySelector("button"),p=w.querySelector(".mp");
   const draw=()=>{
@@ -1195,6 +1222,34 @@ msMake($("#mfw"),MKS.map(k=>[k,MK[k].n]),MFS,{all:"All markets",text:S=>!S.size|
 msMake($("#cvw"),[["ath","ATH & vs ATH"],["mom","MoM, QoQ, YoY, YTD"],["pl","P/L"]],CV,{text:S=>S.size>=3?"All":S.size?S.size+" of 3":"None",on:()=>{sto.set("pt_hc2",JSON.stringify([...CV]));rows()}});
 document.addEventListener("click",closeMs);
 document.addEventListener("keydown",e=>{if(e.key=="Escape")closeMs()});
+
+/* custom dropdowns replacing native selects */
+(function(){
+  const vd=Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,"value"),dd=Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,"disabled");
+  const chk='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+  function make(sel){
+    if(!sel||sel.parentNode.classList.contains("dd"))return;
+    const w=document.createElement("span");w.className="dd";sel.parentNode.insertBefore(w,sel);w.appendChild(sel);
+    const b=document.createElement("button");b.type="button";b.className="ddb";b.setAttribute("aria-haspopup","listbox");
+    const p=document.createElement("div");p.className="ddp";p.hidden=true;p.setAttribute("role","listbox");
+    w.append(b,p);
+    const lab=()=>{const o=sel.options[sel.selectedIndex];b.textContent=(o?o.textContent:"")+" ▾";b.disabled=sel.disabled;if(sel.getAttribute("aria-label"))b.setAttribute("aria-label",sel.getAttribute("aria-label"))};
+    Object.defineProperty(sel,"value",{get(){return vd.get.call(this)},set(v){vd.set.call(this,v);lab()},configurable:true});
+    Object.defineProperty(sel,"disabled",{get(){return dd.get.call(this)},set(v){dd.set.call(this,v);lab()},configurable:true});
+    b.onclick=e=>{e.stopPropagation();const open=!p.hidden;closeMs();if(open)return;
+      p.innerHTML=[...sel.options].map((o,i)=>o.hidden?"":`<button type="button" class="ddi${i==sel.selectedIndex?" on":""}" role="option" aria-selected="${i==sel.selectedIndex}" data-i="${i}"><span class="ddk">${i==sel.selectedIndex?chk:""}</span>${esc(o.textContent)}</button>`).join("");
+      p.className="ddp";p.hidden=false;
+      const r=p.getBoundingClientRect();
+      if(r.right>innerWidth-8)p.classList.add("rt");
+      if(r.bottom>innerHeight-8&&b.getBoundingClientRect().top>r.height+16)p.classList.add("up");
+      const on=p.querySelector(".on");if(on)on.scrollIntoView({block:"nearest"})};
+    p.onclick=e=>{e.stopPropagation();const i=e.target.closest(".ddi");if(!i)return;
+      const o=sel.options[+i.dataset.i];p.hidden=true;
+      if(o&&sel.selectedIndex!=+i.dataset.i){sel.selectedIndex=+i.dataset.i;lab();sel.dispatchEvent(new Event("change",{bubbles:true}))}};
+    sel.addEventListener("change",lab);
+    lab()}
+  ["#aum-ccy","#hr","#gb","#fs","#rf","#fxs","#cvf","#cvt"].forEach(q=>make($(q)));
+})();
 txr();renderNow();getfx();tick();loadHi();loadDay();
 setInterval(tick,1000);
 setInterval(getfx,300000);setInterval(()=>{if(!document.hidden)render()},15000);
