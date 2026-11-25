@@ -1291,15 +1291,19 @@ function tr(s){
   const m=/^(\s*)([\s\S]*?)(\s*)$/.exec(s);if(!m[2])return s;
   const t=trc(m[2]);return t===m[2]?s:m[1]+t+m[3]}
 function applyLang(){
+  clearTimeout(AT);
   AB=true;
   {const zk=LANG.startsWith("zh")?LANG:null,key=zk||"en";[["#lg-guide","g"],["ol.note","f"],["#bn","b"]].forEach(([q,k])=>{const e=$(q);if((e.__l||"en")!==key){e.innerHTML=zk?GZ[zk][k]:EN0[k];e.__l=key}})}
   const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,{acceptNode:n=>(/^(SCRIPT|STYLE|TEXTAREA)$/.test(n.parentNode.nodeName)||n.parentNode.closest("[data-nt]"))?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT});
   let n;while(n=w.nextNode()){const v=n.nodeValue;let o=v;if(n.__t!=null&&v===n.__t)o=n.__o;const t=tr(o);if(t!==v)n.nodeValue=t;n.__o=o;n.__t=t}
   document.querySelectorAll("[title],[placeholder],[aria-label]").forEach(e=>{const a=e.__oa||(e.__oa={});["title","placeholder","aria-label"].forEach(k=>{if(!e.hasAttribute(k))return;const v=e.getAttribute(k);let o=v;if(a[k]&&v===a[k][1])o=a[k][0];const t=tr(o);if(t!==v)e.setAttribute(k,t);a[k]=[o,t]})});
   document.querySelectorAll(".dd>select").forEach(x=>{x.value=x.value});
-  document.documentElement.lang=LANG;DIRTY=LANG!="en-US";
+  document.documentElement.lang=LANG;
+  document.documentElement.classList.toggle("notranslate",LANG.startsWith("en"));
+  document.documentElement.setAttribute("translate",LANG.startsWith("en")?"no":"yes");
+  DIRTY=LANG!="en-US";
   MO.takeRecords();AB=false}
-const MO=new MutationObserver(()=>{if(AB)return;clearTimeout(AT);AT=setTimeout(()=>{if(DIRTY||LANG!="en-US")applyLang()},100)});
+const MO=new MutationObserver(()=>{if(AB)return;clearTimeout(AT);AT=setTimeout(()=>{if(DIRTY||LANG!="en-US")applyLang()},0)});
 MO.observe(document.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:["title","placeholder","aria-label"]});
 (function(){
   const m=$("#stm"),L=$("#sc-lang"),C=$("#sc-ccy"),A=$("#aum-ccy");
@@ -1311,9 +1315,9 @@ MO.observe(document.body,{childList:true,subtree:true,characterData:true,attribu
   $("#sts").onclick=()=>{
     LANG=L.value;sto.set("pt_lang",LANG);
     if(A.value!==C.value){A.value=C.value;A.dispatchEvent(new Event("change"))}
-    close();render();applyLang()}
+    close();renderNow();applyLang()}
 })();
-if(LANG!="en-US")applyLang();
+document.documentElement.lang=LANG;document.documentElement.classList.toggle("notranslate",LANG.startsWith("en"));document.documentElement.setAttribute("translate",LANG.startsWith("en")?"no":"yes");if(LANG!="en-US")applyLang();
 txr();renderNow();getfx();tick();loadHi();loadDay();
 setInterval(tick,1000);
 setInterval(getfx,300000);setInterval(()=>{if(!document.hidden)render()},15000);
