@@ -4,9 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Portfolio Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-:root{color-scheme:light;--bg:#f1f4f6;--pn:#fff;--ink:#14212b;--mu:#5b6b77;--ln:#dbe2e7;--ac:#0d5c73;--up:#0b8a5b;--dn:#c43d2c;--ch:#e6edf1}
-:root[data-theme=dark]{color-scheme:dark;--bg:#0d171e;--pn:#14222c;--ink:#e6edf1;--mu:#92a3af;--ln:#25363f;--ac:#5fc3dc;--up:#3fcf94;--dn:#ff7a68;--ch:#1d2f3a}
+:root{color-scheme:dark;--bg:#000;--pg:linear-gradient(#1d1d1f,#000 288px) no-repeat #000;--pn:#1d1d1f;--hero:#000;--pop:#161617;--ink:#f5f5f7;--mu:#86868b;--ln:#333336;--rl:rgba(255,255,255,.08);--ol:#6e6e73;--fill:rgba(255,255,255,.04);--ac:#2997ff;--bl:#0071e3;--up:#30d158;--dn:#ff453a;--ch:#2a2a2d;--f:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter","Segoe UI",Roboto,sans-serif;--fd:-apple-system,BlinkMacSystemFont,"SF Pro Display","Inter","Segoe UI",Roboto,sans-serif}
+:root[data-theme=light]{color-scheme:light;--bg:#f5f5f7;--pg:#f5f5f7;--pn:#fff;--hero:#fff;--pop:#fff;--ink:#1d1d1f;--mu:#6e6e73;--ln:#d2d2d7;--rl:rgba(0,0,0,.08);--ol:#86868b;--fill:rgba(0,0,0,.03);--ac:#0066cc;--up:#248a3d;--dn:#d70015;--ch:#f5f5f7}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:.9375rem/1.45 "Avenir Next","Segoe UI",system-ui,sans-serif;font-variant-numeric:tabular-nums}
 header{position:sticky;top:0;z-index:40;display:flex;flex-wrap:nowrap;gap:12px;align-items:center;justify-content:space-between;padding:10px max(24px,calc(50% - 576px));background:var(--bg);border-bottom:1px solid var(--ln);margin-bottom:16px}
@@ -170,6 +171,62 @@ header{background:color-mix(in srgb,var(--bg) 72%,transparent);-webkit-backdrop-
 h1{flex:1 1 auto}.ht{overflow:hidden;text-overflow:ellipsis;min-width:0}
 header{flex-wrap:nowrap}
 @media (max-width:480px){.tools{gap:4px}.tools select{padding:0 4px}.tools button:not(#th),.tools .btn{padding:5px 6px}}
+
+/* ===== Apple-style redesign (DESIGN.md): obsidian stage, carbon panels, 28px geometry, blue pills, no shadows ===== */
+body{background:var(--pg);font:400 14px/1.29 var(--f);letter-spacing:-.224px;-webkit-font-smoothing:antialiased}
+header{height:44px;padding-top:0;padding-bottom:0;margin-bottom:0;border-bottom:1px solid var(--rl)}
+h1{font:600 19px/1.21 var(--fd);letter-spacing:.228px}
+.logo{width:28px;height:28px}
+main{padding-top:24px;gap:24px}
+h2{font:600 19px/1.21 var(--fd);letter-spacing:.228px;margin:0 0 16px}
+.hd h2{margin:0}
+.hero-flex,.box{border:0;border-radius:28px;box-shadow:none}
+.box{background:var(--pn);padding:24px}
+.hero-flex{background:var(--hero);padding:48px 40px;margin-bottom:0;gap:32px}
+.lb,.st,.note,.hd div,th{font-size:12px;line-height:1.33;letter-spacing:-.12px}
+.aum{font:600 clamp(48px,10vw,80px)/1.05 var(--fd);letter-spacing:-1.2px;color:var(--ink)}
+.aum-u{font:600 .3em/1 var(--fd);letter-spacing:.2px}
+#tpl>span:first-child{display:inline-block;margin-top:12px;font:600 19px/1.21 var(--fd);letter-spacing:.228px}
+.donut-wrap{width:160px;height:160px}
+.donut-legend{font-size:14px}
+button,select,input{font-size:14px;letter-spacing:-.224px;border-radius:980px;border:1px solid var(--ol);background:var(--fill);padding:7px 16px}
+button:hover{border-color:var(--ink)}
+button.pri{background:var(--bl);border-color:var(--bl);color:#fff;border-radius:170px;padding:8px 22px}
+button.pri:hover{background:#0077ed;border-color:#0077ed}
+:focus-visible{outline:2px solid var(--bl);outline-offset:2px}
+input[type=checkbox]{border-radius:4px}
+.tools button#th,.tools button#ex,.tools label#imb{width:32px;height:32px;border-radius:50%}
+.tools select{height:32px;padding:0 12px}
+.chip{background:rgba(66,66,69,.72);color:rgba(255,255,255,.8);border-radius:9999px;padding:1px 8px}
+:root[data-theme=light] .chip{background:var(--ch);color:var(--mu)}
+th{font-weight:400;border-bottom:1px solid var(--ln);padding:8px}
+td{font-size:14px;border-bottom:1px solid var(--rl);padding:9px 8px}
+tr.g td{background:var(--ch);font-weight:600}
+th.sortable:hover,a.tk:hover,.lg button:hover{color:var(--ac)}
+:root[data-theme] .ccy{color:var(--ac)}
+.hd .mp,#sl{background:var(--pop);border:1px solid var(--ln);border-radius:20px;box-shadow:none;overflow:hidden}
+#sl{overflow:auto}
+#nav{border-radius:0 20px 20px 0;box-shadow:none}
+#lgm .pn{border-radius:28px;box-shadow:none}
+#ath-tip,#h-tip,#donut-tip{box-shadow:none;border:1px solid var(--ln);border-radius:14px;background:var(--pop)}
+#top{background:var(--bl);color:#fff;box-shadow:none}
+.fxg::before,.fxg::after{display:none!important}.fxg.on{box-shadow:none}
+.tg{border-bottom-color:var(--rl)}
+footer{border-top-color:var(--ln)}
+@media (max-width:768px){.hero-flex{padding:28px 20px}.box{padding:16px}.donut-wrap{width:130px;height:130px}main{gap:16px}}
+
+/* hero layout: AUM left, donut + legend right (no wasted space) */
+@media (min-width:700px){
+.hero-flex{flex-wrap:nowrap;align-items:center;gap:28px;padding:36px 32px}
+.hero-left{flex:1 1 auto;min-width:0}
+.aum{font-size:clamp(40px,4.8vw,72px);white-space:nowrap}
+.donut-box{flex:0 0 auto;flex-wrap:nowrap;margin-left:auto;justify-content:flex-end;gap:20px}
+.donut-wrap{width:140px;height:140px}
+.donut-legend{font-size:13px;gap:7px}
+}
+
+/* Total AUM label: bigger and bold */
+.hero-left>.lb{font-size:22px;font-weight:700;line-height:1.2;letter-spacing:0}
 </style>
 </head>
 <body>
@@ -322,7 +379,7 @@ function save(){
 
 /* theme */
 function theme(t){document.documentElement.dataset.theme=t;$("#th").innerHTML=t=="dark"?'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>':'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>';$("#th").title=t=="dark"?"Switch to light mode":"Switch to dark mode";sto.set("pt_theme",t)}
-theme(sto.get("pt_theme")||(matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light"));
+theme(sto.get("pt_theme")||"dark");
 $("#th").onclick=()=>theme(document.documentElement.dataset.theme=="dark"?"light":"dark");
 
 /* format */
